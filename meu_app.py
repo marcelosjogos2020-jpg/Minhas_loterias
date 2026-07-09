@@ -461,32 +461,21 @@ elif local_sorteio:
 else:
     texto_local = "Local não informado"
 
-html_dezenas_resultado = ""
+html_dezenas_resultado = "".join(
+    [f'<span class="dezena-resultado">{dez}</span>' for dez in dezenas_ultimo]
+)
 
-for dez in dezenas_ultimo:
-    html_dezenas_resultado += f'<span class="dezena-resultado">{dez}</span>'
-
-html_ultimo_sorteio = f"""
-<div class="ultimo-sorteio">
-    <div class="ultimo-label">
-        🍀 Último sorteio carregado automaticamente da Caixa
-    </div>
-
-    <div class="ultimo-concurso">
-        Concurso {numero_ultimo} — {data_ultimo}
-    </div>
-
-    <div class="ultimo-local">
-        Sorteio realizado em: <strong>{texto_local}</strong>
-    </div>
-
-    <div class="dezenas-resultado-container">
-        {html_dezenas_resultado}
-    </div>
-</div>
-"""
+html_ultimo_sorteio = (
+    f'<div class="ultimo-sorteio">'
+    f'<div class="ultimo-label">🍀 Último sorteio carregado automaticamente da Caixa</div>'
+    f'<div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>'
+    f'<div class="ultimo-local">Sorteio realizado em: <strong>{texto_local}</strong></div>'
+    f'<div class="dezenas-resultado-container">{html_dezenas_resultado}</div>'
+    f'</div>'
+)
 
 st.markdown(html_ultimo_sorteio, unsafe_allow_html=True)
+
 
 # ============================================================
 # INFO DO PAINEL
