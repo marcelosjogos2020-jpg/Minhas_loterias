@@ -18,7 +18,7 @@ st.set_page_config(
 
 
 # ============================================================
-# CSS GERAL
+# CSS
 # ============================================================
 
 st.markdown(
@@ -54,28 +54,20 @@ st.markdown(
             margin-bottom: 18px;
         }
 
-        .secao-titulo {
-            font-size: 24px;
-            font-weight: 900;
-            margin-top: 18px;
-            margin-bottom: 12px;
-            color: #ffffff;
-        }
-
         .divisor {
             border-top: 1px solid #334155;
             margin: 24px 0 18px 0;
         }
 
         /* =====================================================
-           ÚLTIMO SORTEIO COMPACTO
+           CARD COMPACTO DO ÚLTIMO CONCURSO
         ===================================================== */
 
         .ultimo-sorteio {
             border: 1px solid #1e88ff;
             border-radius: 10px;
             padding: 10px 14px;
-            margin: 8px 0 14px 0;
+            margin: 8px 0 18px 0;
             background: linear-gradient(90deg, #101827, #111827);
             box-shadow: 0 0 8px rgba(30,136,255,0.18);
             max-width: 760px;
@@ -108,123 +100,84 @@ st.markdown(
             width: 26px;
             height: 26px;
             border-radius: 50%;
-            background: #0ea5e9;
-            color: white;
-            font-size: 12px;
-            font-weight: 800;
+            background: #22c55e;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 900;
             margin: 2px;
+            box-shadow: 0 0 6px rgba(34,197,94,0.25);
         }
 
         /* =====================================================
-           BASE DE 18 DEZENAS
+           DEZENAS NORMAIS
         ===================================================== */
 
-        .linha-dezenas {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 22px;
-        }
-
-        .dezena-verde {
+        .dezena-base {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 31px;
-            height: 31px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: #22c55e;
             color: #ffffff;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 900;
-            box-shadow: 0 0 8px rgba(34,197,94,0.28);
-        }
-
-        /* =====================================================
-           PREMIAÇÃO DISCRETA
-        ===================================================== */
-
-        .premios-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-            margin-bottom: 8px;
-        }
-
-        .premio-card {
-            background: #111827;
-            border: 1px solid #334155;
-            border-radius: 7px;
-            padding: 11px 13px;
-            min-height: 58px;
-        }
-
-        .premio-faixa {
-            font-size: 12px;
-            font-weight: 800;
-            color: #ffffff;
-            margin-bottom: 4px;
-        }
-
-        .premio-ganhadores {
-            font-size: 11px;
-            color: #cbd5e1;
-            margin-bottom: 4px;
-        }
-
-        .premio-valor {
-            font-size: 12px;
-            color: #38bdf8;
-            font-weight: 900;
-        }
-
-        .estimativa-box {
-            background: #111827;
-            border: 1px solid #334155;
-            border-radius: 7px;
-            padding: 10px 13px;
-            font-size: 12px;
-            color: #ffffff;
-            margin-top: 6px;
-            margin-bottom: 24px;
-        }
-
-        .estimativa-box span {
-            color: #38bdf8;
-            font-weight: 900;
-        }
-
-        /* =====================================================
-           CARDS DE JOGOS
-        ===================================================== */
-
-        .jogo-card {
-            background: #111827;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 10px 12px;
-            margin-bottom: 10px;
-        }
-
-        .jogo-titulo {
-            font-size: 12px;
-            font-weight: 800;
-            color: #93c5fd;
-            margin-bottom: 7px;
+            margin: 4px;
+            box-shadow: 0 0 8px rgba(34,197,94,0.30);
         }
 
         .dezena-jogo {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 25px;
-            height: 25px;
+            width: 29px;
+            height: 29px;
             border-radius: 50%;
             background: #1d4ed8;
             color: #ffffff;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 800;
-            margin: 2px;
+            margin: 3px;
+        }
+
+        /* =====================================================
+           PREMIAÇÃO ANTIGA
+        ===================================================== */
+
+        .premio-box {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            min-height: 95px;
+            color: #ffffff;
+            font-size: 13px;
+        }
+
+        .premio-box strong {
+            color: #ffffff;
+            font-size: 13px;
+        }
+
+        /* =====================================================
+           JOGOS
+        ===================================================== */
+
+        .jogo-card {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+
+        .jogo-titulo {
+            font-size: 13px;
+            font-weight: 800;
+            color: #93c5fd;
+            margin-bottom: 8px;
         }
 
         .info-box {
@@ -235,26 +188,6 @@ st.markdown(
             color: #cbd5e1;
             font-size: 13px;
             margin-bottom: 14px;
-        }
-
-        @media (max-width: 1100px) {
-            .premios-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 650px) {
-            .premios-grid {
-                grid-template-columns: repeat(1, 1fr);
-            }
-
-            .titulo-principal {
-                font-size: 24px;
-            }
-
-            .secao-titulo {
-                font-size: 20px;
-            }
         }
     </style>
     """,
@@ -301,27 +234,34 @@ def normalizar_dezenas(lista):
     return sorted(dezenas, key=lambda x: int(x))
 
 
-def render_dezenas_verdes(dezenas):
-    html = '<div class="linha-dezenas">'
+def render_dezenas(dezenas, tipo="base"):
+    if tipo == "jogo":
+        classe = "dezena-jogo"
+    else:
+        classe = "dezena-base"
+
+    html = ""
 
     for dezena in dezenas:
-        html += f'<span class="dezena-verde">{dezena}</span>'
-
-    html += '</div>'
+        html += f'<span class="{classe}">{dezena}</span>'
 
     st.markdown(html, unsafe_allow_html=True)
 
 
-def render_dezenas_mini(dezenas):
-    return "".join(
-        [f'<span class="dezena-mini">{dezena}</span>' for dezena in dezenas]
-    )
+def render_dezenas_mini_html(dezenas):
+    html = ""
+
+    for dezena in dezenas:
+        html += f'<span class="dezena-mini">{dezena}</span>'
+
+    return html
 
 
 def render_jogo_card(numero, dezenas):
-    html_dezenas = "".join(
-        [f'<span class="dezena-jogo">{dezena}</span>' for dezena in dezenas]
-    )
+    html_dezenas = ""
+
+    for dezena in dezenas:
+        html_dezenas += f'<span class="dezena-jogo">{dezena}</span>'
 
     st.markdown(
         f"""
@@ -404,7 +344,7 @@ def extrair_ultimo_concurso(dados):
 
 
 # ============================================================
-# LÓGICA DA BASE SUGERIDA
+# LÓGICA DA BASE E DOS JOGOS
 # ============================================================
 
 def gerar_base_18_por_frequencia(historico):
@@ -442,7 +382,9 @@ def gerar_jogos_desdobramento(base_18, quantidade_jogos=20, dezenas_por_jogo=15,
     if quantidade_para_completar > len(variaveis):
         return []
 
-    combinacoes_possiveis = list(itertools.combinations(variaveis, quantidade_para_completar))
+    combinacoes_possiveis = list(
+        itertools.combinations(variaveis, quantidade_para_completar)
+    )
 
     random.shuffle(combinacoes_possiveis)
 
@@ -531,13 +473,13 @@ try:
     historico = buscar_historico_lotofacil(qtd_historico)
     base_18, contador_frequencia = gerar_base_18_por_frequencia(historico)
 
-except Exception as erro:
+except Exception:
     st.error("Não foi possível carregar os dados da Caixa neste momento.")
     st.stop()
 
 
 # ============================================================
-# ÚLTIMO SORTEIO NO TOPO
+# ÚLTIMO CONCURSO COM DEZENAS SORTEADAS
 # ============================================================
 
 numero_ultimo = ultimo["numero"]
@@ -554,7 +496,7 @@ elif local_sorteio:
 else:
     texto_local = "Local não informado"
 
-bolinhas_dezenas = render_dezenas_mini(dezenas_ultimo)
+bolinhas_dezenas = render_dezenas_mini_html(dezenas_ultimo)
 
 st.markdown(
     f"""
@@ -573,45 +515,39 @@ st.markdown(
 # BASE PRINCIPAL SUGERIDA
 # ============================================================
 
-st.markdown(
-    '<div class="secao-titulo">🎯 Base principal sugerida com 18 dezenas</div>',
-    unsafe_allow_html=True
-)
-
-render_dezenas_verdes(base_18)
+st.markdown("### 🎯 Base principal sugerida com 18 dezenas")
+render_dezenas(base_18, "base")
 
 
 # ============================================================
-# PREMIAÇÃO DO ÚLTIMO CONCURSO
+# PREMIAÇÃO DO ÚLTIMO CONCURSO - FORMATO ANTIGO
 # ============================================================
 
-st.markdown(
-    '<div class="secao-titulo">🏆 Premiação do último concurso</div>',
-    unsafe_allow_html=True
-)
+st.markdown("## 🏆 Premiação do último concurso")
 
 rateio = ultimo.get("rateio", [])
 
 if rateio:
-    html_premios = '<div class="premios-grid">'
+    cols = st.columns(min(len(rateio), 5))
 
-    for faixa in rateio[:5]:
+    for i, faixa in enumerate(rateio[:5]):
         desc = faixa.get("descricaoFaixa", "")
-        ganhadores = faixa.get("numeroDeGanhadores", 0)
+        ganh = faixa.get("numeroDeGanhadores", 0)
         valor = faixa.get("valorPremio", 0)
 
-        html_premios += f"""
-        <div class="premio-card">
-            <div class="premio-faixa">{desc}</div>
-            <div class="premio-ganhadores">{ganhadores} ganhador(es)</div>
-            <div class="premio-valor">{formatar_moeda(valor)}</div>
-        </div>
-        """
-
-    html_premios += '</div>'
-
-    st.markdown(html_premios, unsafe_allow_html=True)
-
+        with cols[i]:
+            st.markdown(
+                f"""
+                <div class="premio-box">
+                    <strong>{desc}</strong><br>
+                    {ganh} ganhador(es)<br>
+                    <span style="color:#38bdf8;font-weight:800;">
+                        {formatar_moeda(valor)}
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 else:
     st.info("A Caixa não retornou dados de premiação para este concurso.")
 
@@ -620,10 +556,12 @@ data_prox = ultimo.get("data_proximo", "")
 
 st.markdown(
     f"""
-    <div class="estimativa-box">
+    <div class="premio-box">
         <strong>Estimativa do próximo concurso:</strong>
-        <span>{formatar_moeda(valor_prox)}</span>
-        &nbsp;&nbsp; | &nbsp;&nbsp;
+        <span style="color:#38bdf8;font-weight:900;">
+            {formatar_moeda(valor_prox)}
+        </span>
+        &nbsp; | &nbsp;
         <strong>Data:</strong> {data_prox}
     </div>
     """,
@@ -652,7 +590,7 @@ with col1:
 
 with col2:
     st.markdown(
-        f"""
+        """
         <div class="info-box">
             <strong>Base utilizada:</strong><br>
             18 dezenas
@@ -677,10 +615,7 @@ with col3:
 # GERAÇÃO DOS JOGOS
 # ============================================================
 
-st.markdown(
-    '<div class="secao-titulo">🧩 Jogos gerados a partir da base</div>',
-    unsafe_allow_html=True
-)
+st.markdown("## 🧩 Jogos gerados a partir da base")
 
 jogos = gerar_jogos_desdobramento(
     base_18=base_18,
