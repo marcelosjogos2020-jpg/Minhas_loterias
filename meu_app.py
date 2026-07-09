@@ -6,7 +6,6 @@ import math
 import io
 from collections import Counter
 
-
 # ============================================================
 # CONFIGURAÇÃO DA PÁGINA
 # ============================================================
@@ -17,7 +16,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 
 # ============================================================
 # CSS VISUAL
@@ -133,6 +131,7 @@ st.markdown(
         font-weight: 900;
         margin: 5px;
         font-size: 14px;
+        background: #334155;
     }
 
     .forte {
@@ -169,19 +168,10 @@ st.markdown(
         margin-bottom: 16px;
         color: #ffffff;
     }
-
-    .premio-box {
-        background: #111827;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin-bottom: 8px;
-    }
 </style>
     """,
     unsafe_allow_html=True
 )
-
 
 # ============================================================
 # CONSTANTES
@@ -191,17 +181,12 @@ URL_CAIXA_LOTOFACIL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lot
 
 TODAS_DEZENAS = [str(i).zfill(2) for i in range(1, 26)]
 
-
 # ============================================================
 # FUNÇÕES DE BUSCA NA CAIXA
 # ============================================================
 
 @st.cache_data(ttl=900)
 def buscar_ultimo_concurso_caixa():
-    """
-    Busca automaticamente o último concurso da Lotofácil no sistema da Caixa.
-    """
-
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Accept": "application/json,text/plain,*/*",
@@ -222,10 +207,6 @@ def buscar_ultimo_concurso_caixa():
 
 @st.cache_data(ttl=900)
 def buscar_concurso_caixa(numero_concurso):
-    """
-    Busca um concurso específico da Lotofácil.
-    """
-
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Accept": "application/json,text/plain,*/*",
@@ -248,32 +229,21 @@ def buscar_concurso_caixa(numero_concurso):
 
 @st.cache_data(ttl=900)
 def buscar_ultimos_concursos_caixa(quantidade):
-    """
-    Busca automaticamente os últimos concursos da Lotofácil.
-    """
-
     ultimo = buscar_ultimo_concurso_caixa()
-
     numero_ultimo = int(ultimo["numero"])
+
     concursos = []
 
     for numero in range(numero_ultimo, numero_ultimo - quantidade, -1):
         try:
-            concurso = buscar_concurso_caixa(numero)
-            concursos.append(concurso)
-        except Exception:
+            concursos.append(buscar_concurso_caixa(numero))
+        except:
             pass
 
-    concursos = sorted(concursos, key=lambda x: int(x["numero"]))
-
-    return concursos
+    return sorted(concursos, key=lambda x: int(x["numero"]))
 
 
 def normalizar_dados_concurso(dados):
-    """
-    Padroniza os dados recebidos da Caixa.
-    """
-
     numero = dados.get("numero", "")
     data = dados.get("dataApuracao", "")
     local = dados.get("localSorteio", "")
@@ -282,169 +252,114 @@ def normalizar_dados_concurso(dados):
     dezenas = dados.get("listaDezenas", [])
     dezenas = [str(d).zfill(2) for d in dezenas]
 
-    lista_rateio = dados.get("listaRateioPremio", [])
-    acumulado = dados.get("acumulado", False)
-    valor_estimado_proximo = dados.get("valorEstimadoProximoConcurso", 0)
-    data_proximo = dados.get("dataProximoConcurso", "")
-
     return {
         "numero": numero,
         "data": data,
         "local": local,
         "municipio": municipio,
-        "dezenas": dezenas,
-        "rateio": lista_rateio,
-        "acumulado": acumulado,
-        "valor_estimado_proximo": valor_estimado_proximo,
-        "data_proximo": data_proximo
+        "dezenas": dezenas
     }
-
 
 # ============================================================
 # FUNÇÕES DE ANÁLISE
 # ============================================================
 
 def calcular_frequencia(concursos):
-    """
-    Calcula a frequência das dezenas nos concursos carregados.
-    """
-
     contador = Counter()
 
     for concurso in concursos:
         contador.update(concurso["dezenas"])
 
-    frequencia = {
-        dezena: contador.get(dezena, 0)
-        for dezena in TODAS_DEZENAS
-    }
-
-    return frequencia
+    return {dez: contador.get(dez, 0) for dez in TODAS_DEZENAS}
 
 
 def classificar_dezenas(frequencia):
-    """
-    Classifica dezenas em fortes, intermediárias e fracas.
-    """
-
     ordenadas = sorted(
         frequencia.items(),
-        key=lambda item: (-item[1], int(item[0]))
+        key=lambda x: (-x[1], int(x[0]))
     )
 
-    fortes = [dezena for dezena, freq in ordenadas[:5]]
-    fracas = [dezena for dezena, freq in ordenadas[-6:]]
+    fortes = [d for d, f in ordenadas[:5]]
+    fracas = [d for d, f in ordenadas[-6:]]
+
     intermediarias = [
-        dezena for dezena, freq in ordenadas
-        if dezena not in fortes and dezena not in fracas
+        d for d, f in ordenadas
+        if d not in fortes and d not in fracas
     ]
 
     return fortes, intermediarias, fracas, ordenadas
 
 
 def montar_base_18(fortes, intermediarias, fracas):
-    """
-    Monta uma base sugerida com 18 dezenas.
-    Critério:
-    - 5 fortes
-    - 11 intermediárias
-    - 2 fracas
-    """
-
     base = []
 
     base.extend(fortes[:5])
     base.extend(intermediarias[:11])
     base.extend(fracas[:2])
 
-    base = sorted(list(set(base)), key=lambda x: int(x))
-
-    return base
+    return sorted(list(set(base)), key=lambda x: int(x))
 
 
 def gerar_jogos(base, quantidade_jogos, dezenas_por_jogo=15):
-    """
-    Gera jogos aleatórios a partir da base escolhida.
-    """
-
     jogos = set()
     tentativas = 0
 
     while len(jogos) < quantidade_jogos and tentativas < 10000:
-        jogo = tuple(sorted(random.sample(base, dezenas_por_jogo), key=lambda x: int(x)))
+        jogo = tuple(
+            sorted(
+                random.sample(base, dezenas_por_jogo),
+                key=lambda x: int(x)
+            )
+        )
+
         jogos.add(jogo)
         tentativas += 1
 
-    jogos = [list(jogo) for jogo in jogos]
-    jogos = sorted(jogos)
-
-    return jogos
+    return [list(j) for j in jogos]
 
 
 def jogos_para_csv(jogos):
-    """
-    Converte jogos gerados para CSV.
-    """
-
     dados = []
 
-    for indice, jogo in enumerate(jogos, start=1):
-        linha = {"Jogo": indice}
+    for idx, jogo in enumerate(jogos, 1):
+        linha = {"Jogo": idx}
 
-        for posicao, dezena in enumerate(jogo, start=1):
-            linha[f"D{posicao}"] = dezena
+        for pos, dez in enumerate(jogo, 1):
+            linha[f"D{pos}"] = dez
 
         dados.append(linha)
 
     df = pd.DataFrame(dados)
 
-    buffer = io.StringIO()
-    df.to_csv(buffer, index=False, sep=";")
+    buf = io.StringIO()
+    df.to_csv(buf, index=False, sep=";")
 
-    return buffer.getvalue()
-
-
-def formatar_moeda(valor):
-    """
-    Formata valor monetário em padrão brasileiro.
-    """
-
-    try:
-        valor = float(valor)
-        return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except Exception:
-        return "R$ 0,00"
+    return buf.getvalue()
 
 
 def render_dezenas(dezenas, classe_css):
-    """
-    Renderiza dezenas em bolinhas coloridas.
-    """
-
     html = ""
 
-    for dezena in dezenas:
-        html += f'<span class="dezena {classe_css}">{dezena}</span>'
+    for dez in dezenas:
+        html += f'<span class="dezena {classe_css}">{dez}</span>'
 
     st.markdown(html, unsafe_allow_html=True)
 
 
-def render_jogo(jogo, indice):
-    """
-    Renderiza um jogo na tela.
-    """
+def render_jogo(jogo, idx):
+    html = ""
 
-    dezenas = " ".join(jogo)
+    for dez in jogo:
+        html += f'<span class="dezena">{dez}</span>'
 
     st.markdown(
         f"""
 <div class="jogo">
-    <strong>Jogo {indice:02d}</strong> — {dezenas}
+    <strong>Jogo {idx:02d}</strong> — {html}
 </div>
         """,
         unsafe_allow_html=True
     )
-
 
 # ============================================================
 # SIDEBAR
@@ -452,7 +367,6 @@ def render_jogo(jogo, indice):
 
 st.sidebar.markdown("## 🍀 Menu Principal")
 st.sidebar.markdown("---")
-
 st.sidebar.markdown("### uma seção:")
 st.sidebar.markdown("🔴 📊 **Painel de controle**")
 st.sidebar.markdown("1️⃣ Últimos concursos")
@@ -464,8 +378,8 @@ st.sidebar.markdown("6️⃣ Dezenas fora")
 st.sidebar.markdown("7️⃣ Desdobramento jogos")
 st.sidebar.markdown("8️⃣ Matemática aleatória")
 st.sidebar.markdown("✅ Resumo final")
-
 st.sidebar.markdown("---")
+
 st.sidebar.markdown("## 🎯 Filtros rápidos")
 
 quantidade_concursos = st.sidebar.number_input(
@@ -483,8 +397,6 @@ quantidade_jogos = st.sidebar.number_input(
     value=12,
     step=1
 )
-
-st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar sorteio da Caixa"):
     st.cache_data.clear()
@@ -510,14 +422,12 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-
 # ============================================================
 # TÍTULO
 # ============================================================
 
 st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
 st.markdown("### Painel estatístico com base nos últimos concursos analisados")
-
 
 # ============================================================
 # BUSCA AUTOMÁTICA NA CAIXA
@@ -527,12 +437,10 @@ try:
     ultimo_concurso = buscar_ultimo_concurso_caixa()
     concursos = buscar_ultimos_concursos_caixa(quantidade_concursos)
 
-except Exception as erro:
+except:
     st.error("Não foi possível buscar automaticamente os dados da Caixa.")
-    st.warning("Verifique sua internet ou tente clicar em atualizar novamente.")
-    st.exception(erro)
+    st.warning("Verifique sua internet ou tente novamente.")
     st.stop()
-
 
 # ============================================================
 # ÚLTIMO SORTEIO NO TOPO
@@ -555,20 +463,30 @@ else:
 
 html_dezenas_resultado = ""
 
-for dezena in dezenas_ultimo:
-    html_dezenas_resultado += f'<span class="dezena-resultado">{dezena}</span>'
+for dez in dezenas_ultimo:
+    html_dezenas_resultado += f'<span class="dezena-resultado">{dez}</span>'
 
 html_ultimo_sorteio = f"""
 <div class="ultimo-sorteio">
-<div class="ultimo-label">🍀 Último sorteio carregado automaticamente da Caixa</div>
-<div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>
-<div class="ultimo-local">Sorteio realizado em: <strong>{texto_local}</strong></div>
-<div class="dezenas-resultado-container">{html_dezenas_resultado}</div>
+    <div class="ultimo-label">
+        🍀 Último sorteio carregado automaticamente da Caixa
+    </div>
+
+    <div class="ultimo-concurso">
+        Concurso {numero_ultimo} — {data_ultimo}
+    </div>
+
+    <div class="ultimo-local">
+        Sorteio realizado em: <strong>{texto_local}</strong>
+    </div>
+
+    <div class="dezenas-resultado-container">
+        {html_dezenas_resultado}
+    </div>
 </div>
 """
 
 st.markdown(html_ultimo_sorteio, unsafe_allow_html=True)
-
 
 # ============================================================
 # INFO DO PAINEL
@@ -586,14 +504,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 # ============================================================
 # CÁLCULOS PRINCIPAIS
 # ============================================================
 
 frequencia = calcular_frequencia(concursos)
+
 fortes, intermediarias, fracas, ordenadas = classificar_dezenas(frequencia)
-base_18 = montar_base_18(fortes, intermediarias, fracas)
+
+base_18 = montar_base_18(
+    fortes,
+    intermediarias,
+    fracas
+)
 
 total_combinacoes_lotofacil = math.comb(25, 15)
 total_combinacoes_base_18 = math.comb(18, 15)
@@ -604,9 +527,8 @@ jogos_gerados = gerar_jogos(
     dezenas_por_jogo=15
 )
 
-
 # ============================================================
-# CARDS DE RESUMO
+# CARDS RESUMO
 # ============================================================
 
 col1, col2, col3, col4 = st.columns(4)
@@ -629,7 +551,7 @@ with col2:
     <div class="card-title">Total de combinações da Lotofácil</div>
     <div class="card-value">{total_combinacoes_lotofacil:,}</div>
 </div>
-        """.replace(",", "."),
+        """,
         unsafe_allow_html=True
     )
 
@@ -655,63 +577,7 @@ with col4:
         unsafe_allow_html=True
     )
 
-
 st.markdown("---")
-
-
-# ============================================================
-# PREMIAÇÃO DO ÚLTIMO CONCURSO
-# ============================================================
-
-st.markdown("## 🏆 Premiação do último concurso")
-
-rateio = ultimo_concurso["rateio"]
-
-if rateio:
-    cols_premio = st.columns(min(len(rateio), 5))
-
-    for i, faixa in enumerate(rateio[:5]):
-        descricao = faixa.get("descricaoFaixa", "")
-        ganhadores = faixa.get("numeroDeGanhadores", 0)
-        valor = faixa.get("valorPremio", 0)
-
-        with cols_premio[i]:
-            st.markdown(
-                f"""
-<div class="premio-box">
-    <strong>{descricao}</strong><br>
-    {ganhadores} ganhador(es)<br>
-    <span style="color:#38bdf8; font-weight:800;">
-        {formatar_moeda(valor)}
-    </span>
-</div>
-                """,
-                unsafe_allow_html=True
-            )
-else:
-    st.info("A Caixa não retornou dados de premiação para este concurso.")
-
-
-valor_proximo = ultimo_concurso["valor_estimado_proximo"]
-data_proximo = ultimo_concurso["data_proximo"]
-
-st.markdown(
-    f"""
-<div class="premio-box">
-    <strong>Estimativa do próximo concurso:</strong>
-    <span style="color:#38bdf8; font-weight:900;">
-        {formatar_moeda(valor_proximo)}
-    </span>
-    &nbsp; | &nbsp;
-    <strong>Data:</strong> {data_proximo}
-</div>
-    """,
-    unsafe_allow_html=True
-)
-
-
-st.markdown("---")
-
 
 # ============================================================
 # VISÃO GERAL DA ANÁLISE
@@ -735,29 +601,26 @@ with col_esq:
     render_dezenas(base_18, "base")
 
 with col_dir:
-    st.markdown(f"### Frequência das dezenas nos últimos {len(concursos)} concursos")
+    st.markdown(
+        f"### Frequência das dezenas nos últimos {len(concursos)} concursos"
+    )
 
-    df_freq = pd.DataFrame({
-        "Dezena": list(frequencia.keys()),
-        "Frequência": list(frequencia.values())
-    })
+    df_freq = pd.DataFrame(
+        {
+            "Dezena": list(frequencia.keys()),
+            "Frequência": list(frequencia.values())
+        }
+    )
 
     df_freq["Dezena_Num"] = df_freq["Dezena"].astype(int)
     df_freq = df_freq.sort_values("Dezena_Num")
 
     st.bar_chart(
-        data=df_freq,
-        x="Dezena",
-        y="Frequência",
-        use_container_width=True
+        df_freq.set_index("Dezena")["Frequência"]
     )
 
-
-st.markdown("---")
-
-
 # ============================================================
-# ÚLTIMOS CONCURSOS ANALISADOS
+# ÚLTIMOS CONCURSOS
 # ============================================================
 
 st.markdown("## 🧾 Últimos concursos carregados da Caixa")
@@ -765,11 +628,13 @@ st.markdown("## 🧾 Últimos concursos carregados da Caixa")
 dados_concursos = []
 
 for concurso in concursos:
-    dados_concursos.append({
-        "Concurso": concurso["numero"],
-        "Data": concurso["data"],
-        "Dezenas": " ".join(concurso["dezenas"])
-    })
+    dados_concursos.append(
+        {
+            "Concurso": concurso["numero"],
+            "Data": concurso["data"],
+            "Dezenas": " ".join(concurso["dezenas"])
+        }
+    )
 
 df_concursos = pd.DataFrame(dados_concursos)
 
@@ -779,23 +644,24 @@ st.dataframe(
     hide_index=True
 )
 
-
-st.markdown("---")
-
-
 # ============================================================
-# TABELA DE FREQUÊNCIA
+# FREQUÊNCIA DETALHADA
 # ============================================================
 
 st.markdown("## 🔢 Frequência detalhada das dezenas")
 
-df_freq_tabela = pd.DataFrame([
-    {
-        "Dezena": dezena,
-        "Frequência": freq
-    }
-    for dezena, freq in sorted(frequencia.items(), key=lambda item: int(item[0]))
-])
+df_freq_tabela = pd.DataFrame(
+    [
+        {
+            "Dezena": dez,
+            "Frequência": freq
+        }
+        for dez, freq in sorted(
+            frequencia.items(),
+            key=lambda x: int(x[0])
+        )
+    ]
+)
 
 st.dataframe(
     df_freq_tabela,
@@ -803,36 +669,27 @@ st.dataframe(
     hide_index=True
 )
 
-
-st.markdown("---")
-
-
 # ============================================================
 # DEZENAS FORA DA BASE
 # ============================================================
 
-st.markdown("## 🚫 Dezenas fora da base sugerida")
-
 dezenas_fora = [
-    dezena for dezena in TODAS_DEZENAS
-    if dezena not in base_18
+    dez for dez in TODAS_DEZENAS
+    if dez not in base_18
 ]
+
+st.markdown("## 🚫 Dezenas fora da base sugerida")
 
 render_dezenas(dezenas_fora, "fraca")
 
-
-st.markdown("---")
-
-
 # ============================================================
-# JOGOS GERADOS
+# GERAÇÃO DE JOGOS
 # ============================================================
 
 st.markdown(f"## 🎲 Desdobramento gerado — {quantidade_jogos} jogos")
 
-for indice, jogo in enumerate(jogos_gerados, start=1):
-    render_jogo(jogo, indice)
-
+for idx, jogo in enumerate(jogos_gerados, 1):
+    render_jogo(jogo, idx)
 
 # ============================================================
 # DOWNLOAD CSV
@@ -841,15 +698,11 @@ for indice, jogo in enumerate(jogos_gerados, start=1):
 csv_jogos = jogos_para_csv(jogos_gerados)
 
 st.download_button(
-    label="⬇️ Baixar jogos gerados em CSV",
+    "⬇️ Baixar jogos gerados em CSV",
     data=csv_jogos,
     file_name=f"lotofacil_jogos_concurso_{numero_ultimo}.csv",
     mime="text/csv"
 )
-
-
-st.markdown("---")
-
 
 # ============================================================
 # RESUMO FINAL
