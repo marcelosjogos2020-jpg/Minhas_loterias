@@ -1,9 +1,10 @@
 import streamlit as st
 import requests
-import itertools
+import pandas as pd
 import random
+import math
+import io
 from collections import Counter
-from datetime import datetime
 
 
 # ============================================================
@@ -11,183 +12,142 @@ from datetime import datetime
 # ============================================================
 
 st.set_page_config(
-    page_title="Loterias - Desdobramentos",
+    page_title="Lotofácil | Análises e Desdobramentos",
     page_icon="🍀",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 
 # ============================================================
-# CSS
+# CSS VISUAL
 # ============================================================
 
 st.markdown(
     """
     <style>
         .main {
-            background-color: #020617;
-        }
-
-        section[data-testid="stSidebar"] {
-            background-color: #0f172a;
-        }
-
-        .block-container {
-            padding-top: 1.4rem;
-            padding-bottom: 2rem;
+            background-color: #0b0f16;
         }
 
         h1, h2, h3, h4, h5, h6, p, div, span, label {
             color: #ffffff;
         }
 
-        .titulo-principal {
-            font-size: 30px;
-            font-weight: 900;
-            margin-bottom: 4px;
-            color: #ffffff;
+        .stApp {
+            background-color: #0b0f16;
         }
 
-        .subtitulo {
-            color: #cbd5e1;
-            font-size: 14px;
-            margin-bottom: 18px;
+        section[data-testid="stSidebar"] {
+            background-color: #262833;
         }
 
-        .divisor {
-            border-top: 1px solid #334155;
-            margin: 24px 0 18px 0;
+        .card {
+            background: #141a23;
+            border: 1px solid #2f3745;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 14px;
         }
 
-        /* =====================================================
-           CARD COMPACTO DO ÚLTIMO CONCURSO
-        ===================================================== */
-
-        .ultimo-sorteio {
-            border: 1px solid #1e88ff;
-            border-radius: 10px;
-            padding: 10px 14px;
-            margin: 8px 0 18px 0;
-            background: linear-gradient(90deg, #101827, #111827);
-            box-shadow: 0 0 8px rgba(30,136,255,0.18);
-            max-width: 760px;
-        }
-
-        .ultimo-label {
-            font-size: 12px;
-            color: #93c5fd;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .ultimo-concurso {
-            font-size: 17px;
-            color: #ffffff;
-            font-weight: 800;
-            margin-bottom: 5px;
-        }
-
-        .ultimo-local {
-            color: #cbd5e1;
-            font-size: 12px;
+        .card-title {
+            color: #9fb3c8;
+            font-size: 13px;
             margin-bottom: 8px;
         }
 
-        .dezena-mini {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: #22c55e;
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 900;
-            margin: 2px;
-            box-shadow: 0 0 6px rgba(34,197,94,0.25);
-        }
-
-        /* =====================================================
-           DEZENAS NORMAIS
-        ===================================================== */
-
-        .dezena-base {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #22c55e;
-            color: #ffffff;
-            font-size: 13px;
-            font-weight: 900;
-            margin: 4px;
-            box-shadow: 0 0 8px rgba(34,197,94,0.30);
-        }
-
-        .dezena-jogo {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 29px;
-            height: 29px;
-            border-radius: 50%;
-            background: #1d4ed8;
-            color: #ffffff;
-            font-size: 12px;
+        .card-value {
+            color: #4094ff;
+            font-size: 26px;
             font-weight: 800;
-            margin: 3px;
         }
 
-        /* =====================================================
-           PREMIAÇÃO ANTIGA
-        ===================================================== */
+        .ultimo-sorteio {
+            border: 2px solid #1e88ff;
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin: 10px 0 22px 0;
+            background: linear-gradient(90deg, #111827, #162033);
+            box-shadow: 0 0 16px rgba(30,136,255,0.28);
+        }
+
+        .ultimo-label {
+            font-size: 16px;
+            color: #93c5fd;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .ultimo-concurso {
+            font-size: 25px;
+            color: #ffffff;
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+
+        .ultimo-dezenas {
+            font-size: 30px;
+            color: #38bdf8;
+            font-weight: 900;
+            letter-spacing: 5px;
+            line-height: 1.5;
+        }
+
+        .dezena {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            color: white;
+            font-weight: 900;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .forte {
+            background: #ff6b22;
+        }
+
+        .intermediaria {
+            background: #0ea5e9;
+        }
+
+        .fraca {
+            background: #64748b;
+        }
+
+        .base {
+            background: #22c55e;
+        }
+
+        .jogo {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        .info-box {
+            background: #1d2b3f;
+            border-left: 4px solid #4094ff;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+            color: #ffffff;
+        }
 
         .premio-box {
             background: #111827;
             border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            min-height: 95px;
-            color: #ffffff;
-            font-size: 13px;
-        }
-
-        .premio-box strong {
-            color: #ffffff;
-            font-size: 13px;
-        }
-
-        /* =====================================================
-           JOGOS
-        ===================================================== */
-
-        .jogo-card {
-            background: #111827;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-bottom: 12px;
-        }
-
-        .jogo-titulo {
-            font-size: 13px;
-            font-weight: 800;
-            color: #93c5fd;
+            border-radius: 10px;
+            padding: 12px 16px;
             margin-bottom: 8px;
-        }
-
-        .info-box {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 12px 14px;
-            color: #cbd5e1;
-            font-size: 13px;
-            margin-bottom: 14px;
         }
     </style>
     """,
@@ -196,78 +156,262 @@ st.markdown(
 
 
 # ============================================================
-# FUNÇÕES AUXILIARES
+# CONSTANTES
 # ============================================================
 
+URL_CAIXA_LOTOFACIL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
+
+TODAS_DEZENAS = [str(i).zfill(2) for i in range(1, 26)]
+
+
+# ============================================================
+# FUNÇÕES DE BUSCA NA CAIXA
+# ============================================================
+
+@st.cache_data(ttl=900)
+def buscar_ultimo_concurso_caixa():
+    """
+    Busca automaticamente o último concurso da Lotofácil no sistema da Caixa.
+    """
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json,text/plain,*/*",
+        "Referer": "https://loterias.caixa.gov.br/Paginas/Lotofacil.aspx"
+    }
+
+    resposta = requests.get(
+        URL_CAIXA_LOTOFACIL,
+        headers=headers,
+        timeout=20
+    )
+
+    resposta.raise_for_status()
+    dados = resposta.json()
+
+    return normalizar_dados_concurso(dados)
+
+
+@st.cache_data(ttl=900)
+def buscar_concurso_caixa(numero_concurso):
+    """
+    Busca um concurso específico da Lotofácil.
+    """
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json,text/plain,*/*",
+        "Referer": "https://loterias.caixa.gov.br/Paginas/Lotofacil.aspx"
+    }
+
+    url = f"{URL_CAIXA_LOTOFACIL}/{numero_concurso}"
+
+    resposta = requests.get(
+        url,
+        headers=headers,
+        timeout=20
+    )
+
+    resposta.raise_for_status()
+    dados = resposta.json()
+
+    return normalizar_dados_concurso(dados)
+
+
+@st.cache_data(ttl=900)
+def buscar_ultimos_concursos_caixa(quantidade):
+    """
+    Busca automaticamente os últimos concursos da Lotofácil.
+    """
+
+    ultimo = buscar_ultimo_concurso_caixa()
+
+    numero_ultimo = int(ultimo["numero"])
+    concursos = []
+
+    for numero in range(numero_ultimo, numero_ultimo - quantidade, -1):
+        try:
+            concurso = buscar_concurso_caixa(numero)
+            concursos.append(concurso)
+        except Exception:
+            pass
+
+    concursos = sorted(concursos, key=lambda x: int(x["numero"]))
+
+    return concursos
+
+
+def normalizar_dados_concurso(dados):
+    """
+    Padroniza os dados recebidos da Caixa.
+    """
+
+    numero = dados.get("numero", "")
+    data = dados.get("dataApuracao", "")
+    local = dados.get("localSorteio", "")
+    municipio = dados.get("nomeMunicipioUFSorteio", "")
+
+    dezenas = dados.get("listaDezenas", [])
+    dezenas = [str(d).zfill(2) for d in dezenas]
+
+    lista_rateio = dados.get("listaRateioPremio", [])
+    acumulado = dados.get("acumulado", False)
+    valor_estimado_proximo = dados.get("valorEstimadoProximoConcurso", 0)
+    data_proximo = dados.get("dataProximoConcurso", "")
+
+    return {
+        "numero": numero,
+        "data": data,
+        "local": local,
+        "municipio": municipio,
+        "dezenas": dezenas,
+        "rateio": lista_rateio,
+        "acumulado": acumulado,
+        "valor_estimado_proximo": valor_estimado_proximo,
+        "data_proximo": data_proximo
+    }
+
+
+# ============================================================
+# FUNÇÕES DE ANÁLISE
+# ============================================================
+
+def calcular_frequencia(concursos):
+    """
+    Calcula a frequência das dezenas nos concursos carregados.
+    """
+
+    contador = Counter()
+
+    for concurso in concursos:
+        contador.update(concurso["dezenas"])
+
+    frequencia = {
+        dezena: contador.get(dezena, 0)
+        for dezena in TODAS_DEZENAS
+    }
+
+    return frequencia
+
+
+def classificar_dezenas(frequencia):
+    """
+    Classifica dezenas em fortes, intermediárias e fracas.
+    """
+
+    ordenadas = sorted(
+        frequencia.items(),
+        key=lambda item: (-item[1], int(item[0]))
+    )
+
+    fortes = [dezena for dezena, freq in ordenadas[:5]]
+    fracas = [dezena for dezena, freq in ordenadas[-6:]]
+    intermediarias = [
+        dezena for dezena, freq in ordenadas
+        if dezena not in fortes and dezena not in fracas
+    ]
+
+    return fortes, intermediarias, fracas, ordenadas
+
+
+def montar_base_18(fortes, intermediarias, fracas):
+    """
+    Monta uma base sugerida com 18 dezenas.
+    Critério:
+    - 5 fortes
+    - 11 intermediárias
+    - 2 fracas
+    """
+
+    base = []
+
+    base.extend(fortes[:5])
+    base.extend(intermediarias[:11])
+    base.extend(fracas[:2])
+
+    base = sorted(list(set(base)), key=lambda x: int(x))
+
+    return base
+
+
+def gerar_jogos(base, quantidade_jogos, dezenas_por_jogo=15):
+    """
+    Gera jogos aleatórios a partir da base escolhida.
+    """
+
+    jogos = set()
+    tentativas = 0
+
+    while len(jogos) < quantidade_jogos and tentativas < 10000:
+        jogo = tuple(sorted(random.sample(base, dezenas_por_jogo), key=lambda x: int(x)))
+        jogos.add(jogo)
+        tentativas += 1
+
+    jogos = [list(jogo) for jogo in jogos]
+    jogos = sorted(jogos)
+
+    return jogos
+
+
+def jogos_para_csv(jogos):
+    """
+    Converte jogos gerados para CSV.
+    """
+
+    dados = []
+
+    for indice, jogo in enumerate(jogos, start=1):
+        linha = {"Jogo": indice}
+
+        for posicao, dezena in enumerate(jogo, start=1):
+            linha[f"D{posicao}"] = dezena
+
+        dados.append(linha)
+
+    df = pd.DataFrame(dados)
+
+    buffer = io.StringIO()
+    df.to_csv(buffer, index=False, sep=";")
+
+    return buffer.getvalue()
+
+
 def formatar_moeda(valor):
+    """
+    Formata valor monetário em padrão brasileiro.
+    """
+
     try:
-        valor = float(valor or 0)
+        valor = float(valor)
         return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "R$ 0,00"
 
 
-def formatar_data(data_texto):
-    if not data_texto:
-        return ""
-
-    formatos = ["%d/%m/%Y", "%Y-%m-%d"]
-
-    for formato in formatos:
-        try:
-            return datetime.strptime(data_texto[:10], formato).strftime("%d/%m/%Y")
-        except Exception:
-            pass
-
-    return data_texto
-
-
-def normalizar_dezenas(lista):
-    dezenas = []
-
-    for item in lista or []:
-        try:
-            dezenas.append(f"{int(item):02d}")
-        except Exception:
-            dezenas.append(str(item).zfill(2))
-
-    return sorted(dezenas, key=lambda x: int(x))
-
-
-def render_dezenas(dezenas, tipo="base"):
-    if tipo == "jogo":
-        classe = "dezena-jogo"
-    else:
-        classe = "dezena-base"
+def render_dezenas(dezenas, classe_css):
+    """
+    Renderiza dezenas em bolinhas coloridas.
+    """
 
     html = ""
 
     for dezena in dezenas:
-        html += f'<span class="{classe}">{dezena}</span>'
+        html += f'<span class="dezena {classe_css}">{dezena}</span>'
 
     st.markdown(html, unsafe_allow_html=True)
 
 
-def render_dezenas_mini_html(dezenas):
-    html = ""
+def render_jogo(jogo, indice):
+    """
+    Renderiza um jogo na tela.
+    """
 
-    for dezena in dezenas:
-        html += f'<span class="dezena-mini">{dezena}</span>'
-
-    return html
-
-
-def render_jogo_card(numero, dezenas):
-    html_dezenas = ""
-
-    for dezena in dezenas:
-        html_dezenas += f'<span class="dezena-jogo">{dezena}</span>'
+    dezenas = " ".join(jogo)
 
     st.markdown(
         f"""
-        <div class="jogo-card">
-            <div class="jogo-titulo">Jogo {numero}</div>
-            <div>{html_dezenas}</div>
+        <div class="jogo">
+            <strong>Jogo {indice:02d}</strong> — {dezenas}
         </div>
         """,
         unsafe_allow_html=True
@@ -275,187 +419,64 @@ def render_jogo_card(numero, dezenas):
 
 
 # ============================================================
-# API CAIXA
-# ============================================================
-
-@st.cache_data(ttl=600)
-def buscar_concurso_lotofacil(numero=None):
-    base_url = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
-
-    if numero:
-        url = f"{base_url}/{numero}"
-    else:
-        url = base_url
-
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json,text/plain,*/*"
-    }
-
-    resposta = requests.get(url, headers=headers, timeout=15)
-    resposta.raise_for_status()
-
-    return resposta.json()
-
-
-@st.cache_data(ttl=900)
-def buscar_historico_lotofacil(qtd_concursos=25):
-    ultimo = buscar_concurso_lotofacil()
-    numero_ultimo = int(ultimo.get("numero", 0))
-
-    historico = []
-
-    for numero in range(numero_ultimo, max(numero_ultimo - qtd_concursos, 0), -1):
-        try:
-            concurso = buscar_concurso_lotofacil(numero)
-            dezenas = normalizar_dezenas(concurso.get("listaDezenas", []))
-
-            if dezenas:
-                historico.append({
-                    "numero": concurso.get("numero"),
-                    "data": formatar_data(concurso.get("dataApuracao")),
-                    "dezenas": dezenas
-                })
-
-        except Exception:
-            continue
-
-    return historico
-
-
-def extrair_ultimo_concurso(dados):
-    dezenas = normalizar_dezenas(dados.get("listaDezenas", []))
-
-    local = dados.get("localSorteio", "") or ""
-    municipio = dados.get("nomeMunicipioUFSorteio", "") or ""
-
-    rateio = dados.get("listaRateioPremio", []) or []
-
-    return {
-        "numero": dados.get("numero", ""),
-        "data": formatar_data(dados.get("dataApuracao", "")),
-        "dezenas": dezenas,
-        "local": local,
-        "municipio": municipio,
-        "rateio": rateio,
-        "valor_estimado_proximo": dados.get("valorEstimadoProximoConcurso", 0),
-        "data_proximo": formatar_data(dados.get("dataProximoConcurso", ""))
-    }
-
-
-# ============================================================
-# LÓGICA DA BASE E DOS JOGOS
-# ============================================================
-
-def gerar_base_18_por_frequencia(historico):
-    contador = Counter()
-
-    for concurso in historico:
-        contador.update(concurso["dezenas"])
-
-    todas_dezenas = [f"{i:02d}" for i in range(1, 26)]
-
-    ranking = sorted(
-        todas_dezenas,
-        key=lambda dezena: (-contador[dezena], int(dezena))
-    )
-
-    base_18 = ranking[:18]
-
-    return sorted(base_18, key=lambda x: int(x)), contador
-
-
-def gerar_jogos_desdobramento(base_18, quantidade_jogos=20, dezenas_por_jogo=15, fixas=None):
-    fixas = fixas or []
-    fixas = normalizar_dezenas(fixas)
-
-    base_18 = normalizar_dezenas(base_18)
-
-    fixas_validas = [d for d in fixas if d in base_18]
-    variaveis = [d for d in base_18 if d not in fixas_validas]
-
-    quantidade_para_completar = dezenas_por_jogo - len(fixas_validas)
-
-    if quantidade_para_completar < 0:
-        return []
-
-    if quantidade_para_completar > len(variaveis):
-        return []
-
-    combinacoes_possiveis = list(
-        itertools.combinations(variaveis, quantidade_para_completar)
-    )
-
-    random.shuffle(combinacoes_possiveis)
-
-    jogos = []
-
-    for combinacao in combinacoes_possiveis[:quantidade_jogos]:
-        jogo = sorted(fixas_validas + list(combinacao), key=lambda x: int(x))
-        jogos.append(jogo)
-
-    return jogos
-
-
-# ============================================================
 # SIDEBAR
 # ============================================================
 
-st.sidebar.markdown("## ⚙️ Configurações")
+st.sidebar.markdown("## 🍀 Menu Principal")
+st.sidebar.markdown("---")
 
-qtd_historico = st.sidebar.slider(
-    "Concursos usados na análise",
-    min_value=10,
-    max_value=60,
-    value=25,
-    step=5
-)
+st.sidebar.markdown("### uma seção:")
+st.sidebar.markdown("🔴 📊 **Painel de controle**")
+st.sidebar.markdown("1️⃣ Últimos concursos")
+st.sidebar.markdown("2️⃣ Frequência das bolas")
+st.sidebar.markdown("3️⃣ Leitura estatística")
+st.sidebar.markdown("4️⃣ Estratégia próximo sorteio")
+st.sidebar.markdown("5️⃣ Base de 18 dezenas")
+st.sidebar.markdown("6️⃣ Dezenas fora")
+st.sidebar.markdown("7️⃣ Desdobramento jogos")
+st.sidebar.markdown("8️⃣ Matemática aleatória")
+st.sidebar.markdown("✅ Resumo final")
 
-qtd_jogos = st.sidebar.slider(
-    "Quantidade de jogos gerados",
-    min_value=5,
+st.sidebar.markdown("---")
+st.sidebar.markdown("## 🎯 Filtros rápidos")
+
+quantidade_concursos = st.sidebar.number_input(
+    "Quantidade de concursos para análise",
+    min_value=1,
     max_value=100,
-    value=20,
-    step=5
+    value=11,
+    step=1
 )
 
-dezenas_por_jogo = st.sidebar.selectbox(
-    "Dezenas por jogo",
-    options=[15, 16, 17, 18],
-    index=0
+quantidade_jogos = st.sidebar.number_input(
+    "Quantidade de jogos para chance simulada",
+    min_value=1,
+    max_value=100,
+    value=12,
+    step=1
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔒 Dezenas fixas")
 
-fixas_texto = st.sidebar.text_input(
-    "Digite separadas por vírgula",
-    value="",
-    placeholder="Exemplo: 01, 02, 10"
-)
+if st.sidebar.button("🔄 Atualizar sorteio da Caixa"):
+    st.cache_data.clear()
+    st.rerun()
 
-fixas = []
+st.sidebar.markdown("---")
 
-if fixas_texto.strip():
-    try:
-        fixas = [
-            f"{int(x.strip()):02d}"
-            for x in fixas_texto.split(",")
-            if x.strip()
-        ]
-    except Exception:
-        st.sidebar.warning("Confira o formato das dezenas fixas.")
-
-
-# ============================================================
-# CABEÇALHO
-# ============================================================
-
-st.markdown(
+st.sidebar.markdown(
     """
-    <div class="titulo-principal">🍀 Loterias - Desdobramentos Lotofácil</div>
-    <div class="subtitulo">
-        Análise automática com base nos concursos recentes, sugestão de base principal e geração de jogos.
+    <div style="
+        background:#284769;
+        padding:14px;
+        border-radius:8px;
+        color:#dbeafe;
+        font-size:14px;
+        line-height:1.5;
+    ">
+        Análise baseada automaticamente nos últimos concursos da Lotofácil
+        carregados diretamente da Caixa. Uso estatístico e combinatório,
+        sem garantia de premiação.
     </div>
     """,
     unsafe_allow_html=True
@@ -463,31 +484,39 @@ st.markdown(
 
 
 # ============================================================
-# CARREGAMENTO DOS DADOS
+# TÍTULO
+# ============================================================
+
+st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
+st.markdown("### Painel estatístico com base nos últimos concursos analisados")
+
+
+# ============================================================
+# BUSCA AUTOMÁTICA NA CAIXA
 # ============================================================
 
 try:
-    dados_ultimo = buscar_concurso_lotofacil()
-    ultimo = extrair_ultimo_concurso(dados_ultimo)
+    ultimo_concurso = buscar_ultimo_concurso_caixa()
+    concursos = buscar_ultimos_concursos_caixa(quantidade_concursos)
 
-    historico = buscar_historico_lotofacil(qtd_historico)
-    base_18, contador_frequencia = gerar_base_18_por_frequencia(historico)
-
-except Exception:
-    st.error("Não foi possível carregar os dados da Caixa neste momento.")
+except Exception as erro:
+    st.error("Não foi possível buscar automaticamente os dados da Caixa.")
+    st.warning("Verifique sua internet ou tente clicar em atualizar novamente.")
+    st.exception(erro)
     st.stop()
 
 
 # ============================================================
-# ÚLTIMO CONCURSO COM DEZENAS SORTEADAS
+# ÚLTIMO SORTEIO NO TOPO
 # ============================================================
 
-numero_ultimo = ultimo["numero"]
-data_ultimo = ultimo["data"]
-dezenas_ultimo = ultimo["dezenas"]
+numero_ultimo = ultimo_concurso["numero"]
+data_ultimo = ultimo_concurso["data"]
+dezenas_ultimo = ultimo_concurso["dezenas"]
+dezenas_ultimo_texto = " ".join(dezenas_ultimo)
 
-local_sorteio = ultimo["local"]
-municipio_sorteio = ultimo["municipio"]
+local_sorteio = ultimo_concurso["local"]
+municipio_sorteio = ultimo_concurso["municipio"]
 
 if municipio_sorteio:
     texto_local = municipio_sorteio
@@ -496,15 +525,24 @@ elif local_sorteio:
 else:
     texto_local = "Local não informado"
 
-bolinhas_dezenas = render_dezenas_mini_html(dezenas_ultimo)
-
 st.markdown(
     f"""
     <div class="ultimo-sorteio">
-        <div class="ultimo-label">🍀 Último sorteio da Caixa</div>
-        <div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>
-        <div class="ultimo-local">Local: <strong>{texto_local}</strong></div>
-        <div style="margin-top:8px;">{bolinhas_dezenas}</div>
+        <div class="ultimo-label">
+            🍀 Último sorteio carregado automaticamente da Caixa
+        </div>
+
+        <div class="ultimo-concurso">
+            Concurso {numero_ultimo} — {data_ultimo}
+        </div>
+
+        <div style="color:#cbd5e1; font-size:15px; margin-bottom:12px;">
+            Sorteio realizado em: <strong>{texto_local}</strong>
+        </div>
+
+        <div class="ultimo-dezenas">
+            {dezenas_ultimo_texto}
+        </div>
     </div>
     """,
     unsafe_allow_html=True
@@ -512,36 +550,117 @@ st.markdown(
 
 
 # ============================================================
-# BASE PRINCIPAL SUGERIDA
+# INFO DO PAINEL
 # ============================================================
 
-st.markdown("### 🎯 Base principal sugerida com 18 dezenas")
-render_dezenas(base_18, "base")
+st.markdown(
+    """
+    <div class="info-box">
+        Este painel reúne uma análise estatística feita para a Lotofácil,
+        incluindo frequência das dezenas, seleção de base com 18 números,
+        dezenas temporariamente descartadas, geração de jogos e leitura
+        combinatória.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 
 # ============================================================
-# PREMIAÇÃO DO ÚLTIMO CONCURSO - FORMATO ANTIGO
+# CÁLCULOS PRINCIPAIS
+# ============================================================
+
+frequencia = calcular_frequencia(concursos)
+fortes, intermediarias, fracas, ordenadas = classificar_dezenas(frequencia)
+base_18 = montar_base_18(fortes, intermediarias, fracas)
+
+total_combinacoes_lotofacil = math.comb(25, 15)
+total_combinacoes_base_18 = math.comb(18, 15)
+
+jogos_gerados = gerar_jogos(
+    base=base_18,
+    quantidade_jogos=quantidade_jogos,
+    dezenas_por_jogo=15
+)
+
+
+# ============================================================
+# CARDS DE RESUMO
+# ============================================================
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="card-title">Concursos analisados</div>
+            <div class="card-value">{len(concursos)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col2:
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="card-title">Total de combinações da Lotofácil</div>
+            <div class="card-value">{total_combinacoes_lotofacil:,}</div>
+        </div>
+        """.replace(",", "."),
+        unsafe_allow_html=True
+    )
+
+with col3:
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="card-title">Base sugerida</div>
+            <div class="card-value">{len(base_18)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col4:
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="card-title">Desdobramento</div>
+            <div class="card-value">{quantidade_jogos} jogos</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+st.markdown("---")
+
+
+# ============================================================
+# PREMIAÇÃO DO ÚLTIMO CONCURSO
 # ============================================================
 
 st.markdown("## 🏆 Premiação do último concurso")
 
-rateio = ultimo.get("rateio", [])
+rateio = ultimo_concurso["rateio"]
 
 if rateio:
-    cols = st.columns(min(len(rateio), 5))
+    cols_premio = st.columns(min(len(rateio), 5))
 
     for i, faixa in enumerate(rateio[:5]):
-        desc = faixa.get("descricaoFaixa", "")
-        ganh = faixa.get("numeroDeGanhadores", 0)
+        descricao = faixa.get("descricaoFaixa", "")
+        ganhadores = faixa.get("numeroDeGanhadores", 0)
         valor = faixa.get("valorPremio", 0)
 
-        with cols[i]:
+        with cols_premio[i]:
             st.markdown(
                 f"""
                 <div class="premio-box">
-                    <strong>{desc}</strong><br>
-                    {ganh} ganhador(es)<br>
-                    <span style="color:#38bdf8;font-weight:800;">
+                    <strong>{descricao}</strong><br>
+                    {ganhadores} ganhador(es)<br>
+                    <span style="color:#38bdf8; font-weight:800;">
                         {formatar_moeda(valor)}
                     </span>
                 </div>
@@ -551,119 +670,187 @@ if rateio:
 else:
     st.info("A Caixa não retornou dados de premiação para este concurso.")
 
-valor_prox = ultimo.get("valor_estimado_proximo", 0)
-data_prox = ultimo.get("data_proximo", "")
+
+valor_proximo = ultimo_concurso["valor_estimado_proximo"]
+data_proximo = ultimo_concurso["data_proximo"]
 
 st.markdown(
     f"""
     <div class="premio-box">
         <strong>Estimativa do próximo concurso:</strong>
-        <span style="color:#38bdf8;font-weight:900;">
-            {formatar_moeda(valor_prox)}
+        <span style="color:#38bdf8; font-weight:900;">
+            {formatar_moeda(valor_proximo)}
         </span>
         &nbsp; | &nbsp;
-        <strong>Data:</strong> {data_prox}
+        <strong>Data:</strong> {data_proximo}
     </div>
     """,
     unsafe_allow_html=True
 )
 
 
+st.markdown("---")
+
+
 # ============================================================
-# INFORMAÇÕES DA ANÁLISE
+# VISÃO GERAL DA ANÁLISE
 # ============================================================
 
-st.markdown('<div class="divisor"></div>', unsafe_allow_html=True)
+st.markdown("## 📊 Visão Geral da Análise")
 
-col1, col2, col3 = st.columns(3)
+col_esq, col_dir = st.columns([1, 1])
 
-with col1:
-    st.markdown(
-        f"""
-        <div class="info-box">
-            <strong>Concursos analisados:</strong><br>
-            {len(historico)}
-        </div>
-        """,
-        unsafe_allow_html=True
+with col_esq:
+    st.markdown("### 🔥 Dezenas mais fortes")
+    render_dezenas(fortes, "forte")
+
+    st.markdown("### ⚖️ Grupo intermediário")
+    render_dezenas(intermediarias, "intermediaria")
+
+    st.markdown("### ❄️ Dezenas mais fracas no recorte")
+    render_dezenas(fracas, "fraca")
+
+    st.markdown("### 🎯 Base principal sugerida com 18 dezenas")
+    render_dezenas(base_18, "base")
+
+with col_dir:
+    st.markdown(f"### Frequência das dezenas nos últimos {len(concursos)} concursos")
+
+    df_freq = pd.DataFrame({
+        "Dezena": list(frequencia.keys()),
+        "Frequência": list(frequencia.values())
+    })
+
+    df_freq["Dezena_Num"] = df_freq["Dezena"].astype(int)
+    df_freq = df_freq.sort_values("Dezena_Num")
+
+    st.bar_chart(
+        data=df_freq,
+        x="Dezena",
+        y="Frequência",
+        use_container_width=True
     )
 
-with col2:
-    st.markdown(
-        """
-        <div class="info-box">
-            <strong>Base utilizada:</strong><br>
-            18 dezenas
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 
-with col3:
-    st.markdown(
-        f"""
-        <div class="info-box">
-            <strong>Jogos solicitados:</strong><br>
-            {qtd_jogos}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+st.markdown("---")
 
 
 # ============================================================
-# GERAÇÃO DOS JOGOS
+# ÚLTIMOS CONCURSOS ANALISADOS
 # ============================================================
 
-st.markdown("## 🧩 Jogos gerados a partir da base")
+st.markdown("## 🧾 Últimos concursos carregados da Caixa")
 
-jogos = gerar_jogos_desdobramento(
-    base_18=base_18,
-    quantidade_jogos=qtd_jogos,
-    dezenas_por_jogo=dezenas_por_jogo,
-    fixas=fixas
+dados_concursos = []
+
+for concurso in concursos:
+    dados_concursos.append({
+        "Concurso": concurso["numero"],
+        "Data": concurso["data"],
+        "Dezenas": " ".join(concurso["dezenas"])
+    })
+
+df_concursos = pd.DataFrame(dados_concursos)
+
+st.dataframe(
+    df_concursos,
+    use_container_width=True,
+    hide_index=True
 )
 
-if not jogos:
-    st.warning("Não foi possível gerar jogos com as configurações atuais. Confira as dezenas fixas.")
-else:
-    cols = st.columns(2)
 
-    for idx, jogo in enumerate(jogos, start=1):
-        with cols[(idx - 1) % 2]:
-            render_jogo_card(idx, jogo)
+st.markdown("---")
 
 
 # ============================================================
-# DOWNLOAD DOS JOGOS
+# TABELA DE FREQUÊNCIA
 # ============================================================
 
-if jogos:
-    texto_download = ""
+st.markdown("## 🔢 Frequência detalhada das dezenas")
 
-    for idx, jogo in enumerate(jogos, start=1):
-        texto_download += f"Jogo {idx}: {' '.join(jogo)}\n"
+df_freq_tabela = pd.DataFrame([
+    {
+        "Dezena": dezena,
+        "Frequência": freq
+    }
+    for dezena, freq in sorted(frequencia.items(), key=lambda item: int(item[0]))
+])
 
-    st.download_button(
-        label="📥 Baixar jogos em TXT",
-        data=texto_download,
-        file_name=f"jogos_lotofacil_concurso_{numero_ultimo}.txt",
-        mime="text/plain"
-    )
+st.dataframe(
+    df_freq_tabela,
+    use_container_width=True,
+    hide_index=True
+)
+
+
+st.markdown("---")
 
 
 # ============================================================
-# RODAPÉ
+# DEZENAS FORA DA BASE
 # ============================================================
 
-st.markdown('<div class="divisor"></div>', unsafe_allow_html=True)
+st.markdown("## 🚫 Dezenas fora da base sugerida")
+
+dezenas_fora = [
+    dezena for dezena in TODAS_DEZENAS
+    if dezena not in base_18
+]
+
+render_dezenas(dezenas_fora, "fraca")
+
+
+st.markdown("---")
+
+
+# ============================================================
+# JOGOS GERADOS
+# ============================================================
+
+st.markdown(f"## 🎲 Desdobramento gerado — {quantidade_jogos} jogos")
+
+for indice, jogo in enumerate(jogos_gerados, start=1):
+    render_jogo(jogo, indice)
+
+
+# ============================================================
+# DOWNLOAD CSV
+# ============================================================
+
+csv_jogos = jogos_para_csv(jogos_gerados)
+
+st.download_button(
+    label="⬇️ Baixar jogos gerados em CSV",
+    data=csv_jogos,
+    file_name=f"lotofacil_jogos_concurso_{numero_ultimo}.csv",
+    mime="text/csv"
+)
+
+
+st.markdown("---")
+
+
+# ============================================================
+# RESUMO FINAL
+# ============================================================
+
+st.markdown("## ✅ Resumo final")
 
 st.markdown(
-    """
-    <div style="font-size:12px;color:#94a3b8;">
-        Observação: este sistema apenas organiza dados estatísticos e gera combinações.
-        Não há garantia de premiação.
-    </div>
-    """,
-    unsafe_allow_html=True
+    f"""
+    - **Último concurso carregado automaticamente:** {numero_ultimo}
+    - **Data do último sorteio:** {data_ultimo}
+    - **Dezenas sorteadas:** {dezenas_ultimo_texto}
+    - **Concursos analisados:** {len(concursos)}
+    - **Base sugerida:** {" ".join(base_18)}
+    - **Dezenas fora da base:** {" ".join(dezenas_fora)}
+    - **Jogos gerados:** {quantidade_jogos}
+    - **Total de combinações possíveis da Lotofácil:** {total_combinacoes_lotofacil:,}
+    - **Total de combinações dentro da base de 18 dezenas:** {total_combinacoes_base_18:,}
+    """.replace(",", ".")
+)
+
+st.warning(
+    "Atenção: esta ferramenta faz análise estatística e combinatória. "
+    "Ela não garante premiação, acerto ou resultado futuro."
 )
