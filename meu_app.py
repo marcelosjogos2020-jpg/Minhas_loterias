@@ -94,6 +94,21 @@ st.markdown(
             line-height: 1.5;
         }
 
+        .dezena-resultado {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #22c55e;
+            color: #ffffff;
+            font-weight: 900;
+            margin: 5px;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(34,197,94,0.35);
+        }
+
         .dezena {
             display: inline-flex;
             justify-content: center;
@@ -525,25 +540,30 @@ elif local_sorteio:
 else:
     texto_local = "Local não informado"
 
+html_dezenas_resultado = ""
+
+for dezena in dezenas_ultimo:
+    html_dezenas_resultado += f'<span class="dezena-resultado">{dezena}</span>'
+
 st.markdown(
     f"""
-    <div class="ultimo-sorteio">
-        <div class="ultimo-label">
-            🍀 Último sorteio carregado automaticamente da Caixa
-        </div>
-
-        <div class="ultimo-concurso">
-            Concurso {numero_ultimo} — {data_ultimo}
-        </div>
-
-        <div style="color:#cbd5e1; font-size:15px; margin-bottom:12px;">
-            Sorteio realizado em: <strong>{texto_local}</strong>
-        </div>
-
-        <div class="ultimo-dezenas">
-            {dezenas_ultimo_texto}
-        </div>
+<div class="ultimo-sorteio">
+    <div class="ultimo-label">
+        🍀 Último sorteio carregado automaticamente da Caixa
     </div>
+
+    <div class="ultimo-concurso">
+        Concurso {numero_ultimo} — {data_ultimo}
+    </div>
+
+    <div style="color:#cbd5e1; font-size:15px; margin-bottom:12px;">
+        Sorteio realizado em: <strong>{texto_local}</strong>
+    </div>
+
+    <div>
+        {html_dezenas_resultado}
+    </div>
+</div>
     """,
     unsafe_allow_html=True
 )
