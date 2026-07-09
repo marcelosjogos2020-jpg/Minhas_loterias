@@ -25,146 +25,159 @@ st.set_page_config(
 
 st.markdown(
     """
-    <style>
-        .main {
-            background-color: #0b0f16;
-        }
+<style>
+    .main {
+        background-color: #0b0f16;
+    }
 
-        h1, h2, h3, h4, h5, h6, p, div, span, label {
-            color: #ffffff;
-        }
+    h1, h2, h3, h4, h5, h6, p, div, span, label {
+        color: #ffffff;
+    }
 
-        .stApp {
-            background-color: #0b0f16;
-        }
+    .stApp {
+        background-color: #0b0f16;
+    }
 
-        section[data-testid="stSidebar"] {
-            background-color: #262833;
-        }
+    section[data-testid="stSidebar"] {
+        background-color: #262833;
+    }
 
-        .card {
-            background: #141a23;
-            border: 1px solid #2f3745;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 14px;
-        }
+    .card {
+        background: #141a23;
+        border: 1px solid #2f3745;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 14px;
+    }
 
-        .card-title {
-            color: #9fb3c8;
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
+    .card-title {
+        color: #9fb3c8;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
 
-        .card-value {
-            color: #4094ff;
-            font-size: 26px;
-            font-weight: 800;
-        }
+    .card-value {
+        color: #4094ff;
+        font-size: 26px;
+        font-weight: 800;
+    }
 
-        .ultimo-sorteio {
-            border: 2px solid #1e88ff;
-            border-radius: 14px;
-            padding: 20px 24px;
-            margin: 10px 0 22px 0;
-            background: linear-gradient(90deg, #111827, #162033);
-            box-shadow: 0 0 16px rgba(30,136,255,0.28);
-        }
+    .ultimo-sorteio {
+        border: 2px solid #1e88ff;
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin: 10px 0 22px 0;
+        background: linear-gradient(90deg, #111827, #162033);
+        box-shadow: 0 0 16px rgba(30,136,255,0.28);
+    }
 
-        .ultimo-label {
-            font-size: 16px;
-            color: #93c5fd;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
+    .ultimo-label {
+        font-size: 16px;
+        color: #93c5fd;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
 
-        .ultimo-concurso {
-            font-size: 25px;
-            color: #ffffff;
-            font-weight: 900;
-            margin-bottom: 12px;
-        }
+    .ultimo-concurso {
+        font-size: 25px;
+        color: #ffffff;
+        font-weight: 900;
+        margin-bottom: 12px;
+    }
 
-        .ultimo-dezenas {
-            font-size: 30px;
-            color: #38bdf8;
-            font-weight: 900;
-            letter-spacing: 5px;
-            line-height: 1.5;
-        }
+    .ultimo-local {
+        color: #cbd5e1;
+        font-size: 15px;
+        margin-bottom: 14px;
+    }
 
-        .dezena-resultado {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #22c55e;
-            color: #ffffff;
-            font-weight: 900;
-            margin: 5px;
-            font-size: 14px;
-            box-shadow: 0 0 10px rgba(34,197,94,0.35);
-        }
+    .ultimo-local strong {
+        color: #ffffff;
+    }
 
-        .dezena {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            color: white;
-            font-weight: 900;
-            margin: 5px;
-            font-size: 14px;
-        }
+    .dezenas-resultado-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 6px;
+    }
 
-        .forte {
-            background: #ff6b22;
-        }
+    .dezena-resultado {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #5cff75, #16a34a 65%, #0f7a35);
+        color: #ffffff;
+        font-weight: 900;
+        font-size: 15px;
+        border: 2px solid rgba(255,255,255,0.18);
+        box-shadow:
+            0 0 10px rgba(34,197,94,0.45),
+            inset 0 2px 5px rgba(255,255,255,0.25),
+            inset 0 -4px 8px rgba(0,0,0,0.22);
+    }
 
-        .intermediaria {
-            background: #0ea5e9;
-        }
+    .dezena {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        color: white;
+        font-weight: 900;
+        margin: 5px;
+        font-size: 14px;
+    }
 
-        .fraca {
-            background: #64748b;
-        }
+    .forte {
+        background: #ff6b22;
+    }
 
-        .base {
-            background: #22c55e;
-        }
+    .intermediaria {
+        background: #0ea5e9;
+    }
 
-        .jogo {
-            background: #111827;
-            border: 1px solid #334155;
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            color: #ffffff;
-            font-size: 16px;
-        }
+    .fraca {
+        background: #64748b;
+    }
 
-        .info-box {
-            background: #1d2b3f;
-            border-left: 4px solid #4094ff;
-            border-radius: 8px;
-            padding: 14px 18px;
-            margin-bottom: 16px;
-            color: #ffffff;
-        }
+    .base {
+        background: #22c55e;
+    }
 
-        .premio-box {
-            background: #111827;
-            border: 1px solid #334155;
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-        }
-    </style>
+    .jogo {
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        color: #ffffff;
+        font-size: 16px;
+    }
+
+    .info-box {
+        background: #1d2b3f;
+        border-left: 4px solid #4094ff;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        color: #ffffff;
+    }
+
+    .premio-box {
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+    }
+</style>
     """,
     unsafe_allow_html=True
 )
@@ -425,9 +438,9 @@ def render_jogo(jogo, indice):
 
     st.markdown(
         f"""
-        <div class="jogo">
-            <strong>Jogo {indice:02d}</strong> — {dezenas}
-        </div>
+<div class="jogo">
+    <strong>Jogo {indice:02d}</strong> — {dezenas}
+</div>
         """,
         unsafe_allow_html=True
     )
@@ -481,18 +494,18 @@ st.sidebar.markdown("---")
 
 st.sidebar.markdown(
     """
-    <div style="
-        background:#284769;
-        padding:14px;
-        border-radius:8px;
-        color:#dbeafe;
-        font-size:14px;
-        line-height:1.5;
-    ">
-        Análise baseada automaticamente nos últimos concursos da Lotofácil
-        carregados diretamente da Caixa. Uso estatístico e combinatório,
-        sem garantia de premiação.
-    </div>
+<div style="
+    background:#284769;
+    padding:14px;
+    border-radius:8px;
+    color:#dbeafe;
+    font-size:14px;
+    line-height:1.5;
+">
+    Análise baseada automaticamente nos últimos concursos da Lotofácil
+    carregados diretamente da Caixa. Uso estatístico e combinatório,
+    sem garantia de premiação.
+</div>
     """,
     unsafe_allow_html=True
 )
@@ -545,28 +558,16 @@ html_dezenas_resultado = ""
 for dezena in dezenas_ultimo:
     html_dezenas_resultado += f'<span class="dezena-resultado">{dezena}</span>'
 
-st.markdown(
-    f"""
+html_ultimo_sorteio = f"""
 <div class="ultimo-sorteio">
-    <div class="ultimo-label">
-        🍀 Último sorteio carregado automaticamente da Caixa
-    </div>
-
-    <div class="ultimo-concurso">
-        Concurso {numero_ultimo} — {data_ultimo}
-    </div>
-
-    <div style="color:#cbd5e1; font-size:15px; margin-bottom:12px;">
-        Sorteio realizado em: <strong>{texto_local}</strong>
-    </div>
-
-    <div>
-        {html_dezenas_resultado}
-    </div>
+<div class="ultimo-label">🍀 Último sorteio carregado automaticamente da Caixa</div>
+<div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>
+<div class="ultimo-local">Sorteio realizado em: <strong>{texto_local}</strong></div>
+<div class="dezenas-resultado-container">{html_dezenas_resultado}</div>
 </div>
-    """,
-    unsafe_allow_html=True
-)
+"""
+
+st.markdown(html_ultimo_sorteio, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -575,12 +576,12 @@ st.markdown(
 
 st.markdown(
     """
-    <div class="info-box">
-        Este painel reúne uma análise estatística feita para a Lotofácil,
-        incluindo frequência das dezenas, seleção de base com 18 números,
-        dezenas temporariamente descartadas, geração de jogos e leitura
-        combinatória.
-    </div>
+<div class="info-box">
+    Este painel reúne uma análise estatística feita para a Lotofácil,
+    incluindo frequência das dezenas, seleção de base com 18 números,
+    dezenas temporariamente descartadas, geração de jogos e leitura
+    combinatória.
+</div>
     """,
     unsafe_allow_html=True
 )
@@ -613,10 +614,10 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-title">Concursos analisados</div>
-            <div class="card-value">{len(concursos)}</div>
-        </div>
+<div class="card">
+    <div class="card-title">Concursos analisados</div>
+    <div class="card-value">{len(concursos)}</div>
+</div>
         """,
         unsafe_allow_html=True
     )
@@ -624,10 +625,10 @@ with col1:
 with col2:
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-title">Total de combinações da Lotofácil</div>
-            <div class="card-value">{total_combinacoes_lotofacil:,}</div>
-        </div>
+<div class="card">
+    <div class="card-title">Total de combinações da Lotofácil</div>
+    <div class="card-value">{total_combinacoes_lotofacil:,}</div>
+</div>
         """.replace(",", "."),
         unsafe_allow_html=True
     )
@@ -635,10 +636,10 @@ with col2:
 with col3:
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-title">Base sugerida</div>
-            <div class="card-value">{len(base_18)}</div>
-        </div>
+<div class="card">
+    <div class="card-title">Base sugerida</div>
+    <div class="card-value">{len(base_18)}</div>
+</div>
         """,
         unsafe_allow_html=True
     )
@@ -646,10 +647,10 @@ with col3:
 with col4:
     st.markdown(
         f"""
-        <div class="card">
-            <div class="card-title">Desdobramento</div>
-            <div class="card-value">{quantidade_jogos} jogos</div>
-        </div>
+<div class="card">
+    <div class="card-title">Desdobramento</div>
+    <div class="card-value">{quantidade_jogos} jogos</div>
+</div>
         """,
         unsafe_allow_html=True
     )
@@ -677,13 +678,13 @@ if rateio:
         with cols_premio[i]:
             st.markdown(
                 f"""
-                <div class="premio-box">
-                    <strong>{descricao}</strong><br>
-                    {ganhadores} ganhador(es)<br>
-                    <span style="color:#38bdf8; font-weight:800;">
-                        {formatar_moeda(valor)}
-                    </span>
-                </div>
+<div class="premio-box">
+    <strong>{descricao}</strong><br>
+    {ganhadores} ganhador(es)<br>
+    <span style="color:#38bdf8; font-weight:800;">
+        {formatar_moeda(valor)}
+    </span>
+</div>
                 """,
                 unsafe_allow_html=True
             )
@@ -696,14 +697,14 @@ data_proximo = ultimo_concurso["data_proximo"]
 
 st.markdown(
     f"""
-    <div class="premio-box">
-        <strong>Estimativa do próximo concurso:</strong>
-        <span style="color:#38bdf8; font-weight:900;">
-            {formatar_moeda(valor_proximo)}
-        </span>
-        &nbsp; | &nbsp;
-        <strong>Data:</strong> {data_proximo}
-    </div>
+<div class="premio-box">
+    <strong>Estimativa do próximo concurso:</strong>
+    <span style="color:#38bdf8; font-weight:900;">
+        {formatar_moeda(valor_proximo)}
+    </span>
+    &nbsp; | &nbsp;
+    <strong>Data:</strong> {data_proximo}
+</div>
     """,
     unsafe_allow_html=True
 )
@@ -858,15 +859,15 @@ st.markdown("## ✅ Resumo final")
 
 st.markdown(
     f"""
-    - **Último concurso carregado automaticamente:** {numero_ultimo}
-    - **Data do último sorteio:** {data_ultimo}
-    - **Dezenas sorteadas:** {dezenas_ultimo_texto}
-    - **Concursos analisados:** {len(concursos)}
-    - **Base sugerida:** {" ".join(base_18)}
-    - **Dezenas fora da base:** {" ".join(dezenas_fora)}
-    - **Jogos gerados:** {quantidade_jogos}
-    - **Total de combinações possíveis da Lotofácil:** {total_combinacoes_lotofacil:,}
-    - **Total de combinações dentro da base de 18 dezenas:** {total_combinacoes_base_18:,}
+- **Último concurso carregado automaticamente:** {numero_ultimo}
+- **Data do último sorteio:** {data_ultimo}
+- **Dezenas sorteadas:** {dezenas_ultimo_texto}
+- **Concursos analisados:** {len(concursos)}
+- **Base sugerida:** {" ".join(base_18)}
+- **Dezenas fora da base:** {" ".join(dezenas_fora)}
+- **Jogos gerados:** {quantidade_jogos}
+- **Total de combinações possíveis da Lotofácil:** {total_combinacoes_lotofacil:,}
+- **Total de combinações dentro da base de 18 dezenas:** {total_combinacoes_base_18:,}
     """.replace(",", ".")
 )
 
