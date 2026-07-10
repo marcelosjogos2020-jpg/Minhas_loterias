@@ -3,10 +3,8 @@ import pandas as pd
 import requests
 import itertools
 import math
-import random
-
 from collections import Counter
-
+from datetime import datetime
 
 # ============================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -18,6 +16,11 @@ st.set_page_config(
     layout="wide"
 )
 
+# ============================================================
+# ESTADO DA SESSÃO (SESSION STATE)
+# ============================================================
+if "jogos_gerados" not in st.session_state:
+    st.session_state["jogos_gerados"] = []
 
 # ============================================================
 # CSS
@@ -41,9 +44,9 @@ st.markdown(
     }
 
     .subtitulo {
-        font-size: 20px;
-        color: #dbeafe;
-        font-weight: 700;
+        font-size: 22px;
+        color: #ffffff;
+        font-weight: 800;
         margin-bottom: 24px;
     }
 
@@ -74,6 +77,10 @@ st.markdown(
         color: #ffffff;
         font-size: 14px;
         margin-bottom: 20px;
+    }
+
+    .ultimo-local strong {
+        color: #ffffff;
     }
 
     .dezenas-resultado-container {
@@ -195,52 +202,57 @@ st.markdown(
         font-size: 12px;
     }
 
-    .stButton button {
-        background-color: #1e88ff;
+    /* Estilo para as dezenas que foram acertadas na conferência */
+    .dezena-acerto {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #facc15, #ca8a04 65%, #854d0e);
         color: white;
-        border-radius: 8px;
         font-weight: 800;
-        border: none;
+        margin: 3px;
+        font-size: 12px;
+        box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+    }
+
+    /* Estilo dos cartões de premiação */
+    .premio-card {
+        background: #16222f;
+        border: 1px solid #ca8a04;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+    }
+    .premio-titulo {
+        font-size: 12px;
+        color: #fef08a;
+    }
+    .premio-valor {
+        font-size: 20px;
+        font-weight: 900;
+        color: #facc15;
     }
 
     .stDownloadButton button {
-        background-color: #16a34a;
-        color: white;
+        background-color: #16a34a !important;
+        color: white !important;
         border-radius: 8px;
         font-weight: 800;
-        border: none;
     }
 </style>
     """,
     unsafe_allow_html=True
 )
 
-
-# ============================================================
-# CONFIGURAÇÕES GERAIS
-# ============================================================
-
-BASE_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
-UNIVERSO_DEZENAS = [str(i).zfill(2) for i in range(1, 26)]
-
-
-# ============================================================
-# ESTADO DA APLICAÇÃO
-# ============================================================
-
-if "jogos_gerados" not in st.session_state:
-    st.session_state.jogos_gerados = []
-
-if "numero_geracao" not in st.session_state:
-    st.session_state.numero_geracao = 0
-
-if "conferencia_resultado" not in st.session_state:
-    st.session_state.conferencia_resultado = None
-
-
 # ============================================================
 # FUNÇÕES DE BUSCA NA CAIXA
 # ============================================================
+
+BASE_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
+
 
 @st.cache_data(ttl=600)
 def buscar_concurso(numero=None):
@@ -256,20 +268,16 @@ def buscar_concurso(numero=None):
 
     response = requests.get(url, headers=headers, timeout=20)
     response.raise_for_status()
-
     dados = response.json()
 
     dezenas = dados.get("listaDezenas", [])
-    dezenas = [str(dezena).zfill(2) for dezena in dezenas]
+    dezenas = [str(d).zfill(2) for d in dezenas]
 
     return {
         "numero": dados.get("numero"),
         "data": dados.get("dataApuracao"),
         "dezenas": dezenas,
-        "municipio": (
-            dados.get("nomeMunicipioUFSorteio")
-            or dados.get("nomeMunicipioSorteio")
-        ),
+        "municipio": dados.get("nomeMunicipioUFSorteio") or dados.get("nomeMunicipioSorteio"),
         "local": dados.get("localSorteio"),
         "raw": dados
     }
@@ -285,10 +293,8 @@ def carregar_concursos(qtd):
     for numero in range(numero_ultimo, numero_ultimo - qtd, -1):
         try:
             concurso = buscar_concurso(numero)
-
             if concurso["dezenas"]:
                 concursos.append(concurso)
-
         except Exception:
             continue
 
@@ -307,12 +313,11 @@ def analisar_concursos(concursos):
 
     frequencia = Counter(todas_dezenas)
 
+    universo = [str(i).zfill(2) for i in range(1, 26)]
+
     df_freq = pd.DataFrame({
-        "dezena": UNIVERSO_DEZENAS,
-        "frequencia": [
-            frequencia.get(dezena, 0)
-            for dezena in UNIVERSO_DEZENAS
-        ]
+        "dezena": universo,
+        "frequencia": [frequencia.get(dezena, 0) for dezena in universo]
     })
 
     df_freq = df_freq.sort_values(
@@ -324,15 +329,15 @@ def analisar_concursos(concursos):
 
 
 def calcular_atrasos(concursos):
+    universo = [str(i).zfill(2) for i in range(1, 26)]
     atrasos = {}
 
-    for dezena in UNIVERSO_DEZENAS:
+    for dezena in universo:
         atraso = 0
 
         for concurso in concursos:
             if dezena in concurso["dezenas"]:
                 break
-
             atraso += 1
 
         atrasos[dezena] = atraso
@@ -351,15 +356,12 @@ def calcular_atrasos(concursos):
 
 
 def estatisticas_jogo(jogo, ultimo_resultado):
-    numeros = [int(numero) for numero in jogo]
+    numeros = [int(x) for x in jogo]
 
-    pares = sum(1 for numero in numeros if numero % 2 == 0)
+    pares = sum(1 for n in numeros if n % 2 == 0)
     impares = 15 - pares
     soma = sum(numeros)
-
-    repetidas_ultimo = len(
-        set(jogo).intersection(set(ultimo_resultado))
-    )
+    repetidas_ultimo = len(set(jogo).intersection(set(ultimo_resultado)))
 
     return {
         "pares": pares,
@@ -370,10 +372,10 @@ def estatisticas_jogo(jogo, ultimo_resultado):
 
 
 def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
-    score_freq = sum(mapa_freq.get(dezena, 0) for dezena in jogo)
-    score_atraso = sum(mapa_atraso.get(dezena, 0) for dezena in jogo)
+    score_freq = sum(mapa_freq.get(d, 0) for d in jogo)
+    score_atraso = sum(mapa_atraso.get(d, 0) for d in jogo)
 
-    return score_freq + (score_atraso * 0.25)
+    return score_freq + score_atraso * 0.25
 
 
 def gerar_desdobramento(
@@ -388,25 +390,23 @@ def gerar_desdobramento(
     soma_max,
     repetidas_min,
     repetidas_max,
-    sobreposicao_max,
-    seed=None
+    sobreposicao_max
 ):
-    rng = random.Random(seed)
+    combinacoes = list(itertools.combinations(base, 15))
 
     jogos_validos = []
 
-    for combinacao in itertools.combinations(base, 15):
-        jogo = list(combinacao)
-
+    for combo in combinacoes:
+        jogo = list(combo)
         stats = estatisticas_jogo(jogo, ultimo_resultado)
 
-        if not pares_min <= stats["pares"] <= pares_max:
+        if not (pares_min <= stats["pares"] <= pares_max):
             continue
 
-        if not soma_min <= stats["soma"] <= soma_max:
+        if not (soma_min <= stats["soma"] <= soma_max):
             continue
 
-        if not repetidas_min <= stats["repetidas_ultimo"] <= repetidas_max:
+        if not (repetidas_min <= stats["repetidas_ultimo"] <= repetidas_max):
             continue
 
         pontos = pontuar_jogo(jogo, mapa_freq, mapa_atraso)
@@ -417,15 +417,10 @@ def gerar_desdobramento(
             "pares": stats["pares"],
             "impares": stats["impares"],
             "soma": stats["soma"],
-            "repetidas_ultimo": stats["repetidas_ultimo"],
-            "desempate": rng.random()
+            "repetidas_ultimo": stats["repetidas_ultimo"]
         })
 
-    jogos_validos = sorted(
-        jogos_validos,
-        key=lambda item: (item["score"], item["desempate"]),
-        reverse=True
-    )
+    jogos_validos = sorted(jogos_validos, key=lambda x: x["score"], reverse=True)
 
     selecionados = []
 
@@ -438,11 +433,7 @@ def gerar_desdobramento(
             aprovado = True
 
             for selecionado in selecionados:
-                jogo_selecionado = set(selecionado["jogo"])
-
-                intersecao = len(
-                    jogo_atual.intersection(jogo_selecionado)
-                )
+                intersecao = len(jogo_atual.intersection(set(selecionado["jogo"])))
 
                 if intersecao > sobreposicao_max:
                     aprovado = False
@@ -454,8 +445,6 @@ def gerar_desdobramento(
         if len(selecionados) >= qtd_jogos:
             break
 
-    # Completa a quantidade solicitada se a regra de sobreposição
-    # não permitir selecionar jogos suficientes.
     if len(selecionados) < qtd_jogos:
         for item in jogos_validos:
             if item not in selecionados:
@@ -464,18 +453,15 @@ def gerar_desdobramento(
             if len(selecionados) >= qtd_jogos:
                 break
 
-    for item in selecionados:
-        item.pop("desempate", None)
-
     return selecionados[:qtd_jogos]
 
 
 def jogos_para_csv(jogos):
     linhas = []
 
-    for indice, item in enumerate(jogos, start=1):
+    for idx, item in enumerate(jogos, start=1):
         linha = {
-            "Jogo": indice,
+            "Jogo": idx,
             "Dezenas": " ".join(item["jogo"]),
             "Pares": item["pares"],
             "Ímpares": item["impares"],
@@ -484,18 +470,12 @@ def jogos_para_csv(jogos):
             "Score": round(item["score"], 2)
         }
 
-        for posicao, dezena in enumerate(item["jogo"], start=1):
-            linha[f"D{posicao:02d}"] = dezena
+        for pos, dezena in enumerate(item["jogo"], start=1):
+            linha[f"D{pos:02d}"] = dezena
 
         linhas.append(linha)
 
-    df_csv = pd.DataFrame(linhas)
-
-    return df_csv.to_csv(
-        index=False,
-        sep=";",
-        encoding="utf-8-sig"
-    )
+    return pd.DataFrame(linhas).to_csv(index=False, sep=";", encoding="utf-8-sig")
 
 
 # ============================================================
@@ -503,28 +483,19 @@ def jogos_para_csv(jogos):
 # ============================================================
 
 st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
-
 st.markdown(
-    """
-<div class="subtitulo">
-    Painel estatístico com base nos últimos concursos analisados
-</div>
-    """,
+    '<div class="subtitulo">Painel estatístico com base nos últimos concursos analisados</div>',
     unsafe_allow_html=True
 )
 
-
 # ============================================================
-# ÚLTIMO SORTEIO
+# ÚLTIMO SORTEIO NO TOPO
 # ============================================================
 
 try:
     ultimo_concurso = buscar_concurso()
-
-except Exception:
-    st.error(
-        "Não foi possível carregar o último concurso automaticamente da Caixa."
-    )
+except Exception as erro:
+    st.error("Não foi possível carregar o último concurso automaticamente da Caixa.")
     st.stop()
 
 numero_ultimo = ultimo_concurso["numero"]
@@ -536,43 +507,25 @@ local_sorteio = ultimo_concurso["local"]
 
 if municipio_sorteio:
     texto_local = municipio_sorteio
-
 elif local_sorteio:
     texto_local = local_sorteio
-
 else:
     texto_local = "Local não informado"
 
 html_dezenas_resultado = "".join(
-    [
-        f'<span class="dezena-resultado">{dezena}</span>'
-        for dezena in dezenas_ultimo
-    ]
+    [f'<span class="dezena-resultado">{dezena}</span>' for dezena in dezenas_ultimo]
 )
 
-st.markdown(
-    f"""
-<div class="ultimo-sorteio">
-    <div class="ultimo-label">
-        🍀 Último sorteio carregado automaticamente da Caixa
-    </div>
-
-    <div class="ultimo-concurso">
-        Concurso {numero_ultimo} — {data_ultimo}
-    </div>
-
-    <div class="ultimo-local">
-        Sorteio realizado em: <strong>{texto_local}</strong>
-    </div>
-
-    <div class="dezenas-resultado-container">
-        {html_dezenas_resultado}
-    </div>
-</div>
-    """,
-    unsafe_allow_html=True
+html_ultimo_sorteio = (
+    f'<div class="ultimo-sorteio">'
+    f'<div class="ultimo-label">🍀 Último sorteio carregado automaticamente da Caixa</div>'
+    f'<div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>'
+    f'<div class="ultimo-local">Sorteio realizado em: <strong>{texto_local}</strong></div>'
+    f'<div class="dezenas-resultado-container">{html_dezenas_resultado}</div>'
+    f'</div>'
 )
 
+st.markdown(html_ultimo_sorteio, unsafe_allow_html=True)
 
 # ============================================================
 # SIDEBAR
@@ -591,10 +544,9 @@ qtd_concursos = st.sidebar.number_input(
 tamanho_base = st.sidebar.number_input(
     "Tamanho da base sugerida",
     min_value=15,
-    max_value=20,
+    max_value=25,
     value=18,
-    step=1,
-    help="O limite de 20 evita excesso de combinações e lentidão."
+    step=1
 )
 
 qtd_jogos = st.sidebar.number_input(
@@ -609,7 +561,7 @@ st.sidebar.divider()
 
 dezenas_para_descartar = st.sidebar.multiselect(
     "Dezenas temporariamente descartadas",
-    options=UNIVERSO_DEZENAS,
+    options=[str(i).zfill(2) for i in range(1, 26)],
     default=[]
 )
 
@@ -668,23 +620,6 @@ sobreposicao_max = st.sidebar.slider(
     value=13
 )
 
-
-# ============================================================
-# VALIDAÇÃO DOS FILTROS
-# ============================================================
-
-if pares_min > pares_max:
-    st.sidebar.error("O mínimo de pares não pode ser maior que o máximo.")
-
-if soma_min > soma_max:
-    st.sidebar.error("A soma mínima não pode ser maior que a soma máxima.")
-
-if repetidas_min > repetidas_max:
-    st.sidebar.error(
-        "O mínimo de repetidas não pode ser maior que o máximo."
-    )
-
-
 # ============================================================
 # CARREGAMENTO DOS CONCURSOS
 # ============================================================
@@ -699,35 +634,35 @@ if not concursos:
 df_freq = analisar_concursos(concursos)
 df_atrasos = calcular_atrasos(concursos)
 
-mapa_freq = dict(
-    zip(df_freq["dezena"], df_freq["frequencia"])
-)
+mapa_freq = dict(zip(df_freq["dezena"], df_freq["frequencia"]))
+mapa_atraso = dict(zip(df_atrasos["dezena"], df_atrasos["atraso"]))
 
-mapa_atraso = dict(
-    zip(df_atrasos["dezena"], df_atrasos["atraso"])
-)
-
+# ==========================================
+# PREPARAÇÃO DA LISTA DE OPÇÕES PARA CONFERÊNCIA
+# ==========================================
+opcoes_concurso = {}
+for c in concursos:
+    opcoes_concurso[f"Concurso {c['numero']} ({c['data']})"] = c['dezenas']
+opcoes_concurso["Inserir Dezenas Manualmente"] = []
 
 # ============================================================
-# VISÃO GERAL
+# VISÃO GERAL DA ANÁLISE
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 st.markdown("## 📊 Visão Geral da Análise")
 
-coluna_1, coluna_2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-with coluna_1:
+with col1:
     st.markdown("### 🔥 Dezenas mais fortes")
 
     dezenas_fortes = df_freq.head(10)
 
-    html_fortes = "".join(
-        [
-            f'<span class="dezena-base">{linha["dezena"]}</span>'
-            for _, linha in dezenas_fortes.iterrows()
-        ]
-    )
+    html_fortes = ""
+
+    for _, row in dezenas_fortes.iterrows():
+        html_fortes += f'<span class="dezena-base">{row["dezena"]}</span>'
 
     st.markdown(html_fortes, unsafe_allow_html=True)
 
@@ -742,12 +677,11 @@ with coluna_1:
         hide_index=True
     )
 
-with coluna_2:
-    st.markdown(
-        f"### 📈 Frequência das dezenas nos últimos {len(concursos)} concursos"
-    )
+with col2:
+    st.markdown(f"### 📈 Frequência das dezenas nos últimos {len(concursos)} concursos")
 
-    grafico_freq = df_freq.sort_values("dezena")
+    grafico_freq = df_freq.copy()
+    grafico_freq = grafico_freq.sort_values("dezena")
 
     st.bar_chart(
         grafico_freq,
@@ -756,7 +690,6 @@ with coluna_2:
         use_container_width=True
     )
 
-
 # ============================================================
 # ATRASOS
 # ============================================================
@@ -764,17 +697,15 @@ with coluna_2:
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 st.markdown("## 🧊 Dezenas em atraso")
 
-coluna_1, coluna_2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-with coluna_1:
+with col1:
     dezenas_atrasadas = df_atrasos.head(10)
 
-    html_atrasadas = "".join(
-        [
-            f'<span class="dezena-fria">{linha["dezena"]}</span>'
-            for _, linha in dezenas_atrasadas.iterrows()
-        ]
-    )
+    html_atrasadas = ""
+
+    for _, row in dezenas_atrasadas.iterrows():
+        html_atrasadas += f'<span class="dezena-fria">{row["dezena"]}</span>'
 
     st.markdown(html_atrasadas, unsafe_allow_html=True)
 
@@ -789,8 +720,9 @@ with coluna_1:
         hide_index=True
     )
 
-with coluna_2:
-    grafico_atrasos = df_atrasos.sort_values("dezena")
+with col2:
+    grafico_atrasos = df_atrasos.copy()
+    grafico_atrasos = grafico_atrasos.sort_values("dezena")
 
     st.bar_chart(
         grafico_atrasos,
@@ -798,7 +730,6 @@ with coluna_2:
         y="atraso",
         use_container_width=True
     )
-
 
 # ============================================================
 # BASE SUGERIDA
@@ -810,23 +741,15 @@ st.markdown("## 🎯 Base sugerida")
 df_base = df_freq.copy()
 
 if dezenas_para_descartar:
-    df_base = df_base[
-        ~df_base["dezena"].isin(dezenas_para_descartar)
-    ]
+    df_base = df_base[~df_base["dezena"].isin(dezenas_para_descartar)]
 
 base_sugerida = df_base.head(tamanho_base)["dezena"].tolist()
+base_sugerida = sorted(base_sugerida, key=lambda x: int(x))
 
-base_sugerida = sorted(
-    base_sugerida,
-    key=lambda dezena: int(dezena)
-)
+html_base = ""
 
-html_base = "".join(
-    [
-        f'<span class="dezena-base">{dezena}</span>'
-        for dezena in base_sugerida
-    ]
-)
+for dezena in base_sugerida:
+    html_base += f'<span class="dezena-base">{dezena}</span>'
 
 st.markdown(html_base, unsafe_allow_html=True)
 
@@ -837,284 +760,167 @@ if dezenas_para_descartar:
     )
 
 st.caption(
-    "A base é formada pelas dezenas mais frequentes dentro do período "
-    "analisado, desconsiderando as dezenas descartadas."
+    "A base é montada pelas dezenas mais frequentes dentro do período analisado, "
+    "desconsiderando as dezenas temporariamente descartadas."
 )
 
-
 # ============================================================
-# GERAÇÃO DO DESDOBRAMENTO
+# GERAÇÃO DO DESDOBRAMENTO (MODIFICADO COM O BOTÃO DE GERAR NOVO)
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 st.markdown("## 🧩 Geração de jogos")
 
-jogos_gerados = st.session_state.jogos_gerados
-
 if len(base_sugerida) < 15:
     st.error("A base sugerida precisa ter pelo menos 15 dezenas.")
-    st.session_state.jogos_gerados = []
-    jogos_gerados = []
-
 else:
     total_combinacoes_base = math.comb(len(base_sugerida), 15)
 
     st.info(
-        f"A base atual possui {len(base_sugerida)} dezenas e gera "
-        f"**{total_combinacoes_base:,}** combinações possíveis de 15 dezenas."
-        .replace(",", ".")
+        f"A base atual com {len(base_sugerida)} dezenas gera "
+        f"{total_combinacoes_base:,}".replace(",", ".")
+        + " combinações possíveis de 15 dezenas."
     )
 
-    coluna_gerar, coluna_texto = st.columns([1, 2])
-
-    with coluna_gerar:
-        gerar_novo = st.button(
-            "🔄 Gerar novo desdobramento",
-            use_container_width=True,
-            type="primary"
+    # 🚀 BOTÃO DE GERAR DESDOBRAMENTO NOVO
+    if st.button("🎲 Gerar Novo Desdobramento", use_container_width=True, type="primary"):
+        st.session_state["jogos_gerados"] = gerar_desdobramento(
+            base=base_sugerida,
+            qtd_jogos=qtd_jogos,
+            ultimo_resultado=dezenas_ultimo,
+            mapa_freq=mapa_freq,
+            mapa_atraso=mapa_atraso,
+            pares_min=pares_min,
+            pares_max=pares_max,
+            soma_min=soma_min,
+            soma_max=soma_max,
+            repetidas_min=repetidas_min,
+            repetidas_max=repetidas_max,
+            sobreposicao_max=sobreposicao_max
         )
-
-    with coluna_texto:
-        st.caption(
-            "Após alterar filtros, base ou quantidade de jogos, "
-            "clique neste botão para gerar um novo desdobramento."
-        )
-
-    if gerar_novo:
-        if pares_min > pares_max:
-            st.error("Corrija os filtros de pares antes de gerar os jogos.")
-
-        elif soma_min > soma_max:
-            st.error("Corrija os filtros de soma antes de gerar os jogos.")
-
-        elif repetidas_min > repetidas_max:
-            st.error("Corrija os filtros de repetidas antes de gerar os jogos.")
-
+        if not st.session_state["jogos_gerados"]:
+            st.warning("Nenhum jogo foi encontrado com os filtros atuais. Tente flexibilizar os critérios na lateral.")
         else:
-            st.session_state.numero_geracao += 1
+            st.success(f"{len(st.session_state['jogos_gerados'])} jogos gerados com sucesso e salvos no painel!")
 
-            with st.spinner("Gerando novo desdobramento..."):
-                st.session_state.jogos_gerados = gerar_desdobramento(
-                    base=base_sugerida,
-                    qtd_jogos=qtd_jogos,
-                    ultimo_resultado=dezenas_ultimo,
-                    mapa_freq=mapa_freq,
-                    mapa_atraso=mapa_atraso,
-                    pares_min=pares_min,
-                    pares_max=pares_max,
-                    soma_min=soma_min,
-                    soma_max=soma_max,
-                    repetidas_min=repetidas_min,
-                    repetidas_max=repetidas_max,
-                    sobreposicao_max=sobreposicao_max,
-                    seed=st.session_state.numero_geracao
-                )
+# ============================================================
+# RENDERIZAÇÃO E CONFERÊNCIA DOS JOGOS SALVOS
+# ============================================================
 
-            st.session_state.conferencia_resultado = None
-
-    jogos_gerados = st.session_state.jogos_gerados
-
-    if not jogos_gerados:
-        st.warning(
-            "Nenhum jogo foi gerado ainda. "
-            "Clique em **Gerar novo desdobramento**."
+if st.session_state["jogos_gerados"]:
+    jogos_para_exibir = st.session_state["jogos_gerados"]
+    
+    # 🚀 SEÇÃO COMPLETA DE CONFERÊNCIA DE ACERTOS
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown("## 🎟️ Conferência de Acertos")
+    
+    col_conf1, col_conferir_btn = st.columns([3, 1])
+    
+    with col_conf1:
+        selecao_concurso = st.selectbox(
+            "Selecione o concurso para conferir seus jogos atuais:",
+            options=list(opcoes_concurso.keys()),
+            label_visibility="collapsed"
         )
-
+    
+    dezenas_alvo = []
+    if selecao_concurso == "Inserir Dezenas Manualmente":
+        dezenas_manuais_input = st.text_input("Digite 15 dezenas separadas por espaço (ex: 01 02 03...):")
+        if dezenas_manuais_input:
+            dezenas_alvo = [d.zfill(2) for d in dezenas_manuais_input.strip().split() if d.isdigit()][:15]
     else:
-        st.success(f"{len(jogos_gerados)} jogos gerados com sucesso.")
+        dezenas_alvo = opcoes_concurso[selecao_concurso]
+        
+    # Exibe as dezenas que serão usadas como gabarito de teste
+    if dezenas_alvo:
+        html_gabarito = "".join([f'<span class="dezena-resultado">{d}</span>' for d in dezenas_alvo])
+        st.markdown(f"<div style='margin-bottom:15px;'><strong>Gabarito de Conferência:</strong><br>{html_gabarito}</div>", unsafe_allow_html=True)
 
-        for indice, item in enumerate(jogos_gerados, start=1):
-            html_jogo = "".join(
-                [
-                    f'<span class="dezena-jogo">{dezena}</span>'
-                    for dezena in item["jogo"]
-                ]
-            )
+    # 🚀 BOTÃO DE CONFERÊNCIA
+    rodar_conferencia = col_conferir_btn.button("🔍 Rodar Conferência", use_container_width=True)
 
-            st.markdown(
-                f"""
+    # Dicionário para armazenar contadores de faixas de acertos
+    contadores_premios = {11: 0, 12: 0, 13: 0, 14: 0, 15: 0}
+    mapa_acertos_jogos = {}
+
+    if dezenas_alvo:
+        for idx, item in enumerate(jogos_para_exibir):
+            acertos = set(item["jogo"]).intersection(set(dezenas_alvo))
+            qtd_acertos = len(acertos)
+            mapa_acertos_jogos[idx] = acertos
+            if qtd_acertos in contadores_premios:
+                contadores_premios[qtd_acertos] += 1
+
+        if rodar_conferencia:
+            st.markdown("### 🏆 Painel de Premiações")
+            c_p1, c_p2, c_p3, c_p4, c_p5 = st.columns(5)
+            c_p1.markdown(f'<div class="premio-card"><div class="premio-titulo">11 Acertos</div><div class="premio-value premio-valor">{contadores_premios[11]} jg</div></div>', unsafe_allow_html=True)
+            c_p2.markdown(f'<div class="premio-card"><div class="premio-titulo">12 Acertos</div><div class="premio-value premio-valor">{contadores_premios[12]} jg</div></div>', unsafe_allow_html=True)
+            c_p3.markdown(f'<div class="premio-card"><div class="premio-titulo">13 Acertos</div><div class="premio-value premio-valor">{contadores_premios[13]} jg</div></div>', unsafe_allow_html=True)
+            c_p4.markdown(f'<div class="premio-card"><div class="premio-titulo">14 Acertos</div><div class="premio-value premio-valor">{contadores_premios[14]} jg</div></div>', unsafe_allow_html=True)
+            c_p5.markdown(f'<div class="premio-card"><div class="premio-titulo">15 Acertos</div><div class="premio-value premio-valor">{contadores_premios[15]} jg</div></div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+
+    # Impressão visual da lista de jogos salvos
+    st.markdown("### 📋 Seus Jogos Atuais")
+    for idx, item in enumerate(jogos_para_exibir):
+        html_jogo = ""
+        acertos_desse_jogo = mapa_acertos_jogos.get(idx, set()) if dezenas_alvo else set()
+
+        for dezena in item["jogo"]:
+            if dezena in acertos_desse_jogo and rodar_conferencia:
+                html_jogo += f'<span class="dezena-acerto">{dezena}</span>'
+            else:
+                html_jogo += f'<span class="dezena-jogo">{dezena}</span>'
+
+        texto_conferencia_stats = ""
+        if dezenas_alvo and rodar_conferencia:
+            texto_conferencia_stats = f' | Acertos neste concurso: <strong style="color:#facc15;font-size:14px;">{len(acertos_desse_jogo)} ACERTOS</strong>'
+
+        st.markdown(
+            f"""
 <div class="jogo-box">
-    <div class="jogo-titulo">Jogo {indice}</div>
-
+    <div class="jogo-titulo">Jogo {idx + 1}</div>
     <div>{html_jogo}</div>
-
     <div style="margin-top:10px;color:#cbd5e1;font-size:13px;">
         Pares: <strong>{item["pares"]}</strong> |
         Ímpares: <strong>{item["impares"]}</strong> |
         Soma: <strong>{item["soma"]}</strong> |
         Repetidas do último: <strong>{item["repetidas_ultimo"]}</strong> |
-        Score: <strong>{round(item["score"], 2)}</strong>
-    </div>
-</div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        csv_jogos = jogos_para_csv(jogos_gerados)
-
-        st.download_button(
-            label="⬇️ Baixar jogos em CSV",
-            data=csv_jogos,
-            file_name="desdobramento_lotofacil.csv",
-            mime="text/csv"
-        )
-
-
-# ============================================================
-# CONFERÊNCIA DOS JOGOS
-# ============================================================
-
-st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-st.markdown("## 🔎 Conferência dos jogos")
-
-if not jogos_gerados:
-    st.info(
-        "Gere um desdobramento antes de realizar a conferência."
-    )
-
-else:
-    coluna_concurso, coluna_botao = st.columns([2, 1])
-
-    with coluna_concurso:
-        concurso_conferencia = st.number_input(
-            "Informe o número do concurso para conferir",
-            min_value=1,
-            value=int(numero_ultimo),
-            step=1
-        )
-
-    with coluna_botao:
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        conferir_jogos = st.button(
-            "🔎 Conferir jogos",
-            use_container_width=True
-        )
-
-    if conferir_jogos:
-        try:
-            with st.spinner("Consultando resultado do concurso..."):
-                resultado_conferencia = buscar_concurso(
-                    int(concurso_conferencia)
-                )
-
-            dezenas_sorteadas = resultado_conferencia["dezenas"]
-            dezenas_sorteadas_set = set(dezenas_sorteadas)
-
-            linhas_conferencia = []
-
-            for indice, item in enumerate(jogos_gerados, start=1):
-                jogo = item["jogo"]
-
-                acertos = sorted(
-                    set(jogo).intersection(dezenas_sorteadas_set),
-                    key=lambda dezena: int(dezena)
-                )
-
-                linhas_conferencia.append({
-                    "Jogo": indice,
-                    "Acertos": len(acertos),
-                    "Dezenas acertadas": " ".join(acertos),
-                    "Dezenas do jogo": " ".join(jogo)
-                })
-
-            st.session_state.conferencia_resultado = {
-                "numero": resultado_conferencia["numero"],
-                "data": resultado_conferencia["data"],
-                "dezenas": dezenas_sorteadas,
-                "linhas": linhas_conferencia
-            }
-
-        except Exception:
-            st.error(
-                "Não foi possível consultar esse concurso. "
-                "Verifique o número e tente novamente."
-            )
-
-    conferencia = st.session_state.conferencia_resultado
-
-    if conferencia:
-        html_dezenas_conferencia = "".join(
-            [
-                f'<span class="dezena-resultado">{dezena}</span>'
-                for dezena in conferencia["dezenas"]
-            ]
-        )
-
-        st.markdown(
-            f"""
-<div class="ultimo-sorteio">
-    <div class="ultimo-label">
-        Resultado utilizado para conferência
-    </div>
-
-    <div class="ultimo-concurso">
-        Concurso {conferencia["numero"]} — {conferencia["data"]}
-    </div>
-
-    <div class="dezenas-resultado-container">
-        {html_dezenas_conferencia}
+        Score: <strong>{round(item["score"], 2)}</strong>{texto_conferencia_stats}
     </div>
 </div>
             """,
             unsafe_allow_html=True
         )
 
-        df_conferencia = pd.DataFrame(conferencia["linhas"])
-
-        maior_acerto = int(df_conferencia["Acertos"].max())
-
-        if maior_acerto >= 11:
-            st.success(
-                f"🏆 Maior pontuação encontrada: {maior_acerto} acertos."
-            )
-        else:
-            st.info(
-                f"Maior pontuação encontrada: {maior_acerto} acertos."
-            )
-
-        st.dataframe(
-            df_conferencia.sort_values(
-                by=["Acertos", "Jogo"],
-                ascending=[False, True]
-            ),
-            use_container_width=True,
-            hide_index=True
-        )
-
-        csv_conferencia = df_conferencia.to_csv(
-            index=False,
-            sep=";",
-            encoding="utf-8-sig"
-        )
-
-        st.download_button(
-            label="⬇️ Baixar conferência em CSV",
-            data=csv_conferencia,
-            file_name=f"conferencia_lotofacil_{conferencia['numero']}.csv",
-            mime="text/csv"
-        )
-
+    csv = jogos_para_csv(jogos_para_exibir)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.download_button(
+        label="⬇️ Baixar jogos salvos em CSV",
+        data=csv,
+        file_name="desdobramento_lotofacil.csv",
+        mime="text/csv"
+    )
+else:
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.info("💡 Escolha suas definições de filtros na lateral esquerda e clique em 'Gerar Novo Desdobramento' para iniciar a montagem dos cartões.")
 
 # ============================================================
 # LEITURA COMBINATÓRIA
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-st.markdown("## 🧠 Leitura combinatória")
+st.markdown("## ## 🧠 Leitura combinatória")
 
-coluna_1, coluna_2, coluna_3 = st.columns(3)
+col1, col2, col3 = st.columns(3)
 
-with coluna_1:
+with col1:
     st.markdown("### Distribuição par/ímpar")
-
-    if jogos_gerados:
-        df_paridade = pd.DataFrame(jogos_gerados)
-
+    if st.session_state["jogos_generados" if "jogos_generados" in st.session_state else "jogos_gerados"]:
+        df_paridade = pd.DataFrame(st.session_state["jogos_gerados"])
         st.dataframe(
-            df_paridade[
-                ["pares", "impares", "soma", "repetidas_ultimo"]
-            ].rename(
+            df_paridade[["pares", "impares", "soma", "repetidas_ultimo"]].rename(
                 columns={
                     "pares": "Pares",
                     "impares": "Ímpares",
@@ -1128,39 +934,29 @@ with coluna_1:
     else:
         st.caption("Gere jogos para visualizar esta leitura.")
 
-with coluna_2:
+with col2:
     st.markdown("### Repetição do último concurso")
+    if st.session_state["jogos_gerados"]:
+        repeticoes = [j["repetidas_ultimo"] for j in st.session_state["jogos_gerados"]]
 
-    if jogos_gerados:
         df_repeticoes = pd.DataFrame({
-            "Jogo": list(range(1, len(jogos_gerados) + 1)),
-            "Repetidas": [
-                jogo["repetidas_ultimo"]
-                for jogo in jogos_gerados
-            ]
+            "Repetidas": repeticoes
         })
 
-        st.bar_chart(
-            df_repeticoes,
-            x="Jogo",
-            y="Repetidas",
-            use_container_width=True
-        )
+        st.bar_chart(df_repeticoes, y="Repetidas", use_container_width=True)
     else:
         st.caption("Gere jogos para visualizar esta leitura.")
 
-with coluna_3:
+with col3:
     st.markdown("### Faixa de soma")
-
-    if jogos_gerados:
-        somas = [jogo["soma"] for jogo in jogos_gerados]
+    if st.session_state["jogos_gerados"]:
+        somas = [j["soma"] for j in st.session_state["jogos_gerados"]]
 
         st.metric("Menor soma", min(somas))
         st.metric("Maior soma", max(somas))
         st.metric("Média", round(sum(somas) / len(somas), 2))
     else:
         st.caption("Gere jogos para visualizar esta leitura.")
-
 
 # ============================================================
 # HISTÓRICO CARREGADO
@@ -1184,9 +980,8 @@ with st.expander("📚 Ver concursos analisados"):
         hide_index=True
     )
 
-
 # ============================================================
-# RESUMO FINAL
+# RESUMO FINAL DA PÁGINA
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
@@ -1195,9 +990,8 @@ st.markdown("## 📌 Resumo do painel")
 st.markdown(
     """
 <div class="info-box">
-    Este painel reúne análise de frequência, atrasos, formação de base,
-    filtros combinatórios, geração de desdobramentos e conferência
-    dos jogos com resultados oficiais consultados na Caixa.
+    Este painel reúne uma análise estatística feita para a Lotofácil, incluindo frequência das dezenas,
+    seleção de base com 18 números, dezenas temporariamente descartadas, geração de jogos e leitura combinatória.
 </div>
     """,
     unsafe_allow_html=True
@@ -1205,9 +999,9 @@ st.markdown(
 
 total_combinacoes_lotofacil = math.comb(25, 15)
 
-coluna_1, coluna_2, coluna_3, coluna_4 = st.columns(4)
+col1, col2, col3, col4 = st.columns(4)
 
-with coluna_1:
+with col1:
     st.markdown(
         f"""
 <div class="metric-card">
@@ -1218,20 +1012,18 @@ with coluna_1:
         unsafe_allow_html=True
     )
 
-with coluna_2:
+with col2:
     st.markdown(
         f"""
 <div class="metric-card">
-    <div class="metric-label">Combinações da Lotofácil</div>
-    <div class="metric-value">
-        {total_combinacoes_lotofacil:,}
-    </div>
+    <div class="metric-label">Total de combinações da Lotofácil</div>
+    <div class="metric-value">{total_combinacoes_lotofacil:,}</div>
 </div>
-        """.replace(",", "."),
+        """.replace(",", ","),
         unsafe_allow_html=True
     )
 
-with coluna_3:
+with col3:
     st.markdown(
         f"""
 <div class="metric-card">
@@ -1242,12 +1034,12 @@ with coluna_3:
         unsafe_allow_html=True
     )
 
-with coluna_4:
+with col4:
     st.markdown(
         f"""
 <div class="metric-card">
-    <div class="metric-label">Desdobramento atual</div>
-    <div class="metric-value">{len(jogos_gerados)} jogos</div>
+    <div class="metric-label">Desdobramento</div>
+    <div class="metric-value">{len(st.session_state["jogos_gerados"])} jogos</div>
 </div>
         """,
         unsafe_allow_html=True
@@ -1257,8 +1049,7 @@ st.markdown(
     """
 <br>
 <div style="color:#94a3b8;font-size:13px;text-align:center;">
-    Análise estatística e combinatória. Este painel não garante premiação
-    e não substitui uma decisão pessoal de jogo.
+    Análise estatística e combinatória. Este painel não garante premiação e não substitui decisão pessoal de jogo.
 </div>
     """,
     unsafe_allow_html=True
