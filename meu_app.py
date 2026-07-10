@@ -160,6 +160,22 @@ st.markdown(
         box-shadow: 0 0 8px rgba(30,136,255,0.45);
     }
 
+    /* Estilo para destacar as dezenas fixas na base */
+    .dezena-fixa-painel {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        font-weight: 900;
+        margin: 4px;
+        border: 2px solid #818cf8;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
+    }
+
     .dezena-fria {
         display: inline-flex;
         justify-content: center;
@@ -202,7 +218,6 @@ st.markdown(
         font-size: 12px;
     }
 
-    /* Estilo para as dezenas que foram acertadas na conferência */
     .dezena-acerto {
         display: inline-flex;
         justify-content: center;
@@ -218,7 +233,6 @@ st.markdown(
         box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
     }
 
-    /* Estilo dos cartões de premiação */
     .premio-card {
         background: #16222f;
         border: 1px solid #ca8a04;
@@ -355,7 +369,7 @@ def calcular_atrasos(concursos):
     return df_atrasos
 
 
-def estatisticas_jogo(jogo, ultimo_resultado):
+def staticas_jogo(jogo, ultimo_resultado):
     numeros = [int(x) for x in jogo]
 
     pares = sum(1 for n in numeros if n % 2 == 0)
@@ -378,8 +392,10 @@ def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
     return score_freq + score_atraso * 0.25
 
 
-def gerar_desdobramento(
-    base,
+# 🚀 ATUALIZADO: Motor de combinação adaptado para injetar dezenas fixas de forma limpa e performática
+def gerar_desdobramento_com_fixos(
+    base_variavel,
+    fixos,
     qtd_jogos,
     ultimo_resultado,
     mapa_freq,
@@ -392,13 +408,14 @@ def gerar_desdobramento(
     repetidas_max,
     sobreposicao_max
 ):
-    combinacoes = list(itertools.combinations(base, 15))
+    vagas_restantes = 15 - len(fixos)
+    combinacoes_variaveis = list(itertools.combinations(base_variavel, vagas_restantes))
 
     jogos_validos = []
 
-    for combo in combinacoes:
-        jogo = list(combo)
-        stats = estatisticas_jogo(jogo, ultimo_resultado)
+    for combo in combinacoes_variaveis:
+        jogo = sorted(list(fixos) + list(combo), key=lambda x: int(x))
+        stats = staticas_jogo(jogo, ultimo_resultado)
 
         if not (pares_min <= stats["pares"] <= pares_max):
             continue
@@ -542,10 +559,10 @@ qtd_concursos = st.sidebar.number_input(
 )
 
 tamanho_base = st.sidebar.number_input(
-    "Tamanho da base sugerida",
+    "Tamanho da base sugerida (Total de números jogados)",
     min_value=15,
     max_value=25,
-    value=18,
+    value=20,
     step=1
 )
 
@@ -559,9 +576,17 @@ qtd_jogos = st.sidebar.number_input(
 
 st.sidebar.divider()
 
+# 🚀 NOVO SELETOR: Escolha de 1 a 5 números fixos travados em todos os bilhetes
+dezenas_fixas = st.sidebar.multiselect(
+    "Dezenas FIXAS (Presentes em todos os bilhetes - Máx 5)",
+    options=[str(i).zfill(2) for i in range(1, 25 + 1)],
+    default=[],
+    max_selections=5
+)
+
 dezenas_para_descartar = st.sidebar.multiselect(
     "Dezenas temporariamente descartadas",
-    options=[str(i).zfill(2) for i in range(1, 26)],
+    options=[str(i).zfill(2) for i in range(1, 26) if str(i).zfill(2) not in dezenas_fixas],
     default=[]
 )
 
@@ -569,56 +594,16 @@ st.sidebar.divider()
 
 st.sidebar.subheader("Filtros combinatórios")
 
-pares_min = st.sidebar.slider(
-    "Mínimo de pares",
-    min_value=0,
-    max_value=15,
-    value=6
-)
+pares_min = st.sidebar.slider("Mínimo de pares", min_value=0, max_value=15, value=6)
+pares_max = st.sidebar.slider("Máximo de pares", min_value=0, max_value=15, value=9)
 
-pares_max = st.sidebar.slider(
-    "Máximo de pares",
-    min_value=0,
-    max_value=15,
-    value=9
-)
+soma_min = st.sidebar.number_input("Soma mínima", min_value=120, max_value=300, value=170, step=1)
+soma_max = st.sidebar.number_input("Soma máxima", min_value=120, max_value=300, value=220, step=1)
 
-soma_min = st.sidebar.number_input(
-    "Soma mínima",
-    min_value=120,
-    max_value=300,
-    value=170,
-    step=1
-)
+repetidas_min = st.sidebar.slider("Mínimo de repetidas do último concurso", min_value=0, max_value=15, value=8)
+repetidas_max = st.sidebar.slider("Máximo de repetidas do último concurso", min_value=0, max_value=15, value=11)
 
-soma_max = st.sidebar.number_input(
-    "Soma máxima",
-    min_value=120,
-    max_value=300,
-    value=220,
-    step=1
-)
-
-repetidas_min = st.sidebar.slider(
-    "Mínimo de repetidas do último concurso",
-    min_value=0,
-    max_value=15,
-    value=8
-)
-
-repetidas_max = st.sidebar.slider(
-    "Máximo de repetidas do último concurso",
-    min_value=0,
-    max_value=15,
-    value=11
-)
-
-sobreposicao_max = st.sidebar.slider(
-    "Sobreposição máxima entre jogos",
-    min_value=8,
-    max_value=15,
-    value=13
-)
+sobreposicao_max = st.sidebar.slider("Sobreposição máxima entre jogos", min_value=8, max_value=15, value=13)
 
 # ============================================================
 # CARREGAMENTO DOS CONCURSOS
@@ -637,9 +622,6 @@ df_atrasos = calcular_atrasos(concursos)
 mapa_freq = dict(zip(df_freq["dezena"], df_freq["frequencia"]))
 mapa_atraso = dict(zip(df_atrasos["dezena"], df_atrasos["atraso"]))
 
-# ==========================================
-# PREPARAÇÃO DA LISTA DE OPÇÕES PARA CONFERÊNCIA
-# ==========================================
 opcoes_concurso = {}
 for c in concursos:
     opcoes_concurso[f"Concurso {c['numero']} ({c['data']})"] = c['dezenas']
@@ -732,7 +714,7 @@ with col2:
     )
 
 # ============================================================
-# BASE SUGERIDA
+# BASE SUGERIDA (ADAPTADA PARA NÚMEROS FIXOS)
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
@@ -740,52 +722,58 @@ st.markdown("## 🎯 Base sugerida")
 
 df_base = df_freq.copy()
 
-if dezenas_para_descartar:
-    df_base = df_base[~df_base["dezena"].isin(dezenas_para_descartar)]
+# Remove descartadas e fixas para calcular o pool de variáveis puras
+exclusoes_pool = dezenas_para_descartar + dezenas_fixas
+if exclusoes_pool:
+    df_base = df_base[~df_base["dezena"].isin(exclusoes_pool)]
 
-base_sugerida = df_base.head(tamanho_base)["dezena"].tolist()
-base_sugerida = sorted(base_sugerida, key=lambda x: int(x))
+# Vagas livres para números que vão variar no fechamento
+vagas_variaveis = tamanho_base - len(dezenas_fixas)
+base_variavel = df_base.head(vagas_variaveis)["dezena"].tolist()
+
+# União montada e ordenada para exibição completa
+base_sugerida_completa = sorted(list(set(base_variavel + dezenas_fixas)), key=lambda x: int(x))
 
 html_base = ""
-
-for dezena in base_sugerida:
-    html_base += f'<span class="dezena-base">{dezena}</span>'
+for dezena in base_sugerida_completa:
+    if dezena in dezenas_fixas:
+        html_base += f'<span class="dezena-fixa-painel">{dezena}</span>'
+    else:
+        html_base += f'<span class="dezena-base">{dezena}</span>'
 
 st.markdown(html_base, unsafe_allow_html=True)
 
+if dezenas_fixas:
+    st.info(f"📌 As dezenas destacadas em **Roxo/Azul** são as suas fixas travadas em todos os jogos.")
 if dezenas_para_descartar:
-    st.warning(
-        "Dezenas descartadas temporariamente: "
-        + ", ".join(dezenas_para_descartar)
-    )
-
-st.caption(
-    "A base é montada pelas dezenas mais frequentes dentro do período analisado, "
-    "desconsiderando as dezenas temporariamente descartadas."
-)
+    st.warning("Dezenas descartadas temporariamente: " + ", ".join(dezenas_para_descartar))
 
 # ============================================================
-# GERAÇÃO DO DESDOBRAMENTO (MODIFICADO COM O BOTÃO DE GERAR NOVO)
+# GERAÇÃO DO DESDOBRAMENTO
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 st.markdown("## 🧩 Geração de jogos")
 
-if len(base_sugerida) < 15:
-    st.error("A base sugerida precisa ter pelo menos 15 dezenas.")
+vagas_restantes_jogo = 15 - len(dezenas_fixas)
+
+if len(base_sugerida_completa) < 15:
+    st.error("A sua base sugerida total precisa atingir no mínimo 15 dezenas combinadas.")
+elif len(base_variavel) < vagas_restantes_jogo:
+    st.error(f"Você precisa de pelo menos {vagas_restantes_jogo} números variáveis disponíveis no pool para completar as vagas livres.")
 else:
-    total_combinacoes_base = math.comb(len(base_sugerida), 15)
+    total_combinacoes_base = math.comb(len(base_variavel), vagas_restantes_jogo)
 
     st.info(
-        f"A base atual com {len(base_sugerida)} dezenas gera "
-        f"{total_combinacoes_base:,}".replace(",", ".")
-        + " combinações possíveis de 15 dezenas."
+        f"A sua estratégia atual fixa {len(dezenas_fixas)} números e combina as outras {vagas_restantes_jogo} vagas "
+        f"em cima das {len(base_variavel)} dezenas variáveis da sua base. Total de caminhos no fechamento: "
+        f"{total_combinacoes_base:,}".replace(",", ".") + " combinações."
     )
 
-    # 🚀 BOTÃO DE GERAR DESDOBRAMENTO NOVO
     if st.button("🎲 Gerar Novo Desdobramento", use_container_width=True, type="primary"):
-        st.session_state["jogos_gerados"] = gerar_desdobramento(
-            base=base_sugerida,
+        st.session_state["jogos_gerados"] = gerar_desdobramento_com_fixos(
+            base_variavel=base_variavel,
+            fixos=dezenas_fixas,
             qtd_jogos=qtd_jogos,
             ultimo_resultado=dezenas_ultimo,
             mapa_freq=mapa_freq,
@@ -801,21 +789,19 @@ else:
         if not st.session_state["jogos_gerados"]:
             st.warning("Nenhum jogo foi encontrado com os filtros atuais. Tente flexibilizar os critérios na lateral.")
         else:
-            st.success(f"{len(st.session_state['jogos_gerados'])} jogos gerados com sucesso e salvos no painel!")
+            st.success(f"{len(st.session_state['jogos_gerados'])} jogos gerados com sucesso travando as dezenas fixas!")
 
 # ============================================================
-# RENDERIZAÇÃO E CONFERÊNCIA DOS JOGOS SALVOS
+# IMPRESSÃO E CENTRAL DE CONFERÊNCIA
 # ============================================================
 
 if st.session_state["jogos_gerados"]:
     jogos_para_exibir = st.session_state["jogos_gerados"]
     
-    # 🚀 SEÇÃO COMPLETA DE CONFERÊNCIA DE ACERTOS
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     st.markdown("## 🎟️ Conferência de Acertos")
     
     col_conf1, col_conferir_btn = st.columns([3, 1])
-    
     with col_conf1:
         selecao_concurso = st.selectbox(
             "Selecione o concurso para conferir seus jogos atuais:",
@@ -831,15 +817,12 @@ if st.session_state["jogos_gerados"]:
     else:
         dezenas_alvo = opcoes_concurso[selecao_concurso]
         
-    # Exibe as dezenas que serão usadas como gabarito de teste
     if dezenas_alvo:
         html_gabarito = "".join([f'<span class="dezena-resultado">{d}</span>' for d in dezenas_alvo])
-        st.markdown(f"<div style='margin-bottom:15px;'><strong>Gabarito de Conferência:</strong><br>{html_gabarito}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='margin-bottom:15px;'><strong>Gabarito de Sorteio:</strong><br>{html_gabarito}</div>", unsafe_allow_html=True)
 
-    # 🚀 BOTÃO DE CONFERÊNCIA
     rodar_conferencia = col_conferir_btn.button("🔍 Rodar Conferência", use_container_width=True)
 
-    # Dicionário para armazenar contadores de faixas de acertos
     contadores_premios = {11: 0, 12: 0, 13: 0, 14: 0, 15: 0}
     mapa_acertos_jogos = {}
 
@@ -854,14 +837,13 @@ if st.session_state["jogos_gerados"]:
         if rodar_conferencia:
             st.markdown("### 🏆 Painel de Premiações")
             c_p1, c_p2, c_p3, c_p4, c_p5 = st.columns(5)
-            c_p1.markdown(f'<div class="premio-card"><div class="premio-titulo">11 Acertos</div><div class="premio-value premio-valor">{contadores_premios[11]} jg</div></div>', unsafe_allow_html=True)
-            c_p2.markdown(f'<div class="premio-card"><div class="premio-titulo">12 Acertos</div><div class="premio-value premio-valor">{contadores_premios[12]} jg</div></div>', unsafe_allow_html=True)
-            c_p3.markdown(f'<div class="premio-card"><div class="premio-titulo">13 Acertos</div><div class="premio-value premio-valor">{contadores_premios[13]} jg</div></div>', unsafe_allow_html=True)
-            c_p4.markdown(f'<div class="premio-card"><div class="premio-titulo">14 Acertos</div><div class="premio-value premio-valor">{contadores_premios[14]} jg</div></div>', unsafe_allow_html=True)
-            c_p5.markdown(f'<div class="premio-card"><div class="premio-titulo">15 Acertos</div><div class="premio-value premio-valor">{contadores_premios[15]} jg</div></div>', unsafe_allow_html=True)
+            c_p1.markdown(f'<div class="premio-card"><div class="premio-titulo">11 Acertos</div><div class="premio-valor">{contadores_premios[11]} jg</div></div>', unsafe_allow_html=True)
+            c_p2.markdown(f'<div class="premio-card"><div class="premio-titulo">12 Acertos</div><div class="premio-valor">{contadores_premios[12]} jg</div></div>', unsafe_allow_html=True)
+            c_p3.markdown(f'<div class="premio-card"><div class="premio-titulo">13 Acertos</div><div class="premio-valor">{contadores_premios[13]} jg</div></div>', unsafe_allow_html=True)
+            c_p4.markdown(f'<div class="premio-card"><div class="premio-titulo">14 Acertos</div><div class="premio-valor">{contadores_premios[14]} jg</div></div>', unsafe_allow_html=True)
+            c_p5.markdown(f'<div class="premio-card"><div class="premio-titulo">15 Acertos</div><div class="premio-valor">{contadores_premios[15]} jg</div></div>', unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
 
-    # Impressão visual da lista de jogos salvos
     st.markdown("### 📋 Seus Jogos Atuais")
     for idx, item in enumerate(jogos_para_exibir):
         html_jogo = ""
@@ -875,12 +857,12 @@ if st.session_state["jogos_gerados"]:
 
         texto_conferencia_stats = ""
         if dezenas_alvo and rodar_conferencia:
-            texto_conferencia_stats = f' | Acertos neste concurso: <strong style="color:#facc15;font-size:14px;">{len(acertos_desse_jogo)} ACERTOS</strong>'
+            texto_conferencia_stats = f' | Premiação: <strong style="color:#facc15;font-size:14px;">{len(acertos_desse_jogo)} ACERTOS</strong>'
 
         st.markdown(
             f"""
 <div class="jogo-box">
-    <div class="jogo-titulo">Jogo {idx + 1}</div>
+    <div class="jogo-titulo">Jogo {idx + 1} {"🌟 (Contém Fixos)" if dezenas_fixas else ""}</div>
     <div>{html_jogo}</div>
     <div style="margin-top:10px;color:#cbd5e1;font-size:13px;">
         Pares: <strong>{item["pares"]}</strong> |
@@ -897,27 +879,27 @@ if st.session_state["jogos_gerados"]:
     csv = jogos_para_csv(jogos_para_exibir)
     st.markdown("<br>", unsafe_allow_html=True)
     st.download_button(
-        label="⬇️ Baixar jogos salvos em CSV",
+        label="⬇️ Baixar desdobramento ativo em CSV",
         data=csv,
         file_name="desdobramento_lotofacil.csv",
         mime="text/csv"
     )
 else:
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    st.info("💡 Escolha suas definições de filtros na lateral esquerda e clique em 'Gerar Novo Desdobramento' para iniciar a montagem dos cartões.")
+    st.info("💡 Alinhou a estratégia de fixos e filtros na barra esquerda? Clique em 'Gerar Novo Desdobramento' para processar os bilhetes.")
 
 # ============================================================
 # LEITURA COMBINATÓRIA
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-st.markdown("## ## 🧠 Leitura combinatória")
+st.markdown("## 🧠 Leitura combinatória")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("### Distribuição par/ímpar")
-    if st.session_state["jogos_generados" if "jogos_generados" in st.session_state else "jogos_gerados"]:
+    if st.session_state["jogos_gerados"]:
         df_paridade = pd.DataFrame(st.session_state["jogos_gerados"])
         st.dataframe(
             df_paridade[["pares", "impares", "soma", "repetidas_ultimo"]].rename(
@@ -938,11 +920,7 @@ with col2:
     st.markdown("### Repetição do último concurso")
     if st.session_state["jogos_gerados"]:
         repeticoes = [j["repetidas_ultimo"] for j in st.session_state["jogos_gerados"]]
-
-        df_repeticoes = pd.DataFrame({
-            "Repetidas": repeticoes
-        })
-
+        df_repeticoes = pd.DataFrame({"Repetidas": repeticoes})
         st.bar_chart(df_repeticoes, y="Repetidas", use_container_width=True)
     else:
         st.caption("Gere jogos para visualizar esta leitura.")
@@ -951,7 +929,6 @@ with col3:
     st.markdown("### Faixa de soma")
     if st.session_state["jogos_gerados"]:
         somas = [j["soma"] for j in st.session_state["jogos_gerados"]]
-
         st.metric("Menor soma", min(somas))
         st.metric("Maior soma", max(somas))
         st.metric("Média", round(sum(somas) / len(somas), 2))
@@ -991,7 +968,7 @@ st.markdown(
     """
 <div class="info-box">
     Este painel reúne uma análise estatística feita para a Lotofácil, incluindo frequência das dezenas,
-    seleção de base com 18 números, dezenas temporariamente descartadas, geração de jogos e leitura combinatória.
+    seleção de base, dezenas fixas e móveis, descartes automáticos, geração controlada e conferência integrada de acertos.
 </div>
     """,
     unsafe_allow_html=True
@@ -1027,8 +1004,8 @@ with col3:
     st.markdown(
         f"""
 <div class="metric-card">
-    <div class="metric-label">Base sugerida</div>
-    <div class="metric-value">{len(base_sugerida)}</div>
+    <div class="metric-label">Tamanho da sua base</div>
+    <div class="metric-value">{len(base_sugerida_completa)} nros</div>
 </div>
         """,
         unsafe_allow_html=True
@@ -1038,7 +1015,7 @@ with col4:
     st.markdown(
         f"""
 <div class="metric-card">
-    <div class="metric-label">Desdobramento</div>
+    <div class="metric-label">Desdobramento ativo</div>
     <div class="metric-value">{len(st.session_state["jogos_gerados"])} jogos</div>
 </div>
         """,
@@ -1049,7 +1026,7 @@ st.markdown(
     """
 <br>
 <div style="color:#94a3b8;font-size:13px;text-align:center;">
-    Análise estatística e combinatória. Este painel não garante premiação e não substitui decisão pessoal de jogo.
+    Análise estatística e combinatória. Este painel não garante premiação e não substitui a decisão pessoal de aposta.
 </div>
     """,
     unsafe_allow_html=True
