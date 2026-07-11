@@ -617,39 +617,82 @@ def calcular_posicoes_mm(x0, y0, dx, dy):
     return posicoes
 
 
-def gerar_html_impressao_volante(jogo_caixa1, jogo_caixa2, calib):
+def montar_paginas_volante(jogos):
     """
-    Monta uma página HTML tamanho A4 contendo APENAS as marcas (bolinhas),
-    nas posições calibradas, para ser impressa por cima do volante físico
-    já colado na folha A4. Nenhum fundo/imagem do volante é desenhado.
+    Agrupa a lista de jogos em pares (Caixa 1 / Caixa 2), reproduzindo o
+    padrão oficial do volante físico da Lotofácil (2 caixas por folha).
+    Retorna uma lista de dicts: {"rotulo1", "jogo1", "rotulo2", "jogo2"}.
+    """
+    paginas = []
+    total = len(jogos)
+    i = 0
+    numero_jogo = 1
+    while i < total:
+        jogo1 = jogos[i]["jogo"]
+        rotulo1 = f"Jogo {numero_jogo}"
+        jogo2 = None
+        rotulo2 = None
+        if i + 1 < total:
+            jogo2 = jogos[i + 1]["jogo"]
+            rotulo2 = f"Jogo {numero_jogo + 1}"
+        paginas.append({
+            "rotulo1": rotulo1, "jogo1": jogo1,
+            "rotulo2": rotulo2, "jogo2": jogo2
+        })
+        i += 2
+        numero_jogo += 2
+    return paginas
+
+
+def gerar_html_impressao_volante(paginas, calib):
+    """
+    Monta um HTML com uma folha A4 por PÁGINA (cada página = 1 volante físico
+    com até 2 caixas preenchidas), contendo APENAS as marcas (bolinhas) nas
+    posições calibradas — sem nenhum desenho do volante — para imprimir por
+    cima do(s) volante(s) físico(s) já colado(s) na(s) folha(s) A4.
     """
     raio = calib["raio"]
     diametro = raio * 2
 
-    marcas_html = ""
-    guia_html = ""
+    pos1_base = calcular_posicoes_mm(calib["x1"], calib["y1"], calib["dx"], calib["dy"])
+    pos2_base = calcular_posicoes_mm(calib["x2"], calib["y2"], calib["dx"], calib["dy"])
 
-    if jogo_caixa1:
-        pos1 = calcular_posicoes_mm(calib["x1"], calib["y1"], calib["dx"], calib["dy"])
-        for num, (x, y) in pos1.items():
-            if num in jogo_caixa1:
+    folhas_html = ""
+
+    for idx, pagina in enumerate(paginas):
+        marcas_html = ""
+        guia_html = ""
+
+        jogo1_set = set(pagina["jogo1"]) if pagina["jogo1"] else set()
+        jogo2_set = set(pagina["jogo2"]) if pagina["jogo2"] else set()
+
+        for num, (x, y) in pos1_base.items():
+            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
+            if num in jogo1_set:
                 marcas_html += (
                     f'<div class="marca" style="left:{x}mm; top:{y}mm; '
                     f'width:{diametro}mm; height:{diametro}mm;"></div>'
                 )
-        for num, (x, y) in pos1.items():
-            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
 
-    if jogo_caixa2:
-        pos2 = calcular_posicoes_mm(calib["x2"], calib["y2"], calib["dx"], calib["dy"])
-        for num, (x, y) in pos2.items():
-            if num in jogo_caixa2:
+        for num, (x, y) in pos2_base.items():
+            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
+            if num in jogo2_set:
                 marcas_html += (
                     f'<div class="marca" style="left:{x}mm; top:{y}mm; '
                     f'width:{diametro}mm; height:{diametro}mm;"></div>'
                 )
-        for num, (x, y) in pos2.items():
-            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
+
+        quebra = "always" if idx < len(paginas) - 1 else "auto"
+        rotulo_pagina = pagina["rotulo1"]
+        if pagina["rotulo2"]:
+            rotulo_pagina += f" e {pagina['rotulo2']}"
+
+        folhas_html += f"""
+    <div class="folha" style="page-break-after:{quebra};">
+        <div class="no-print rotulo-folha">Volante {idx + 1} — {rotulo_pagina}</div>
+        {guia_html}
+        {marcas_html}
+    </div>"""
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -662,13 +705,20 @@ def gerar_html_impressao_volante(jogo_caixa1, jogo_caixa2, calib):
         margin: 0;
         padding: 0;
         width: 210mm;
-        height: 297mm;
         background: white;
     }}
     .folha {{
         position: relative;
         width: 210mm;
         height: 297mm;
+    }}
+    .rotulo-folha {{
+        position: absolute;
+        top: 4mm;
+        left: 4mm;
+        font-size: 11px;
+        color: #999;
+        font-family: sans-serif;
     }}
     .marca {{
         position: absolute;
@@ -687,7 +737,7 @@ def gerar_html_impressao_volante(jogo_caixa1, jogo_caixa2, calib):
         text-align: center;
         transform: translate(-50%, -50%);
     }}
-    .no-print {{
+    .barra-topo {{
         position: fixed;
         top: 8px;
         left: 8px;
@@ -698,7 +748,7 @@ def gerar_html_impressao_volante(jogo_caixa1, jogo_caixa2, calib):
         font-family: sans-serif;
         color: white;
     }}
-    .no-print button {{
+    .barra-topo button {{
         padding: 8px 16px;
         font-weight: bold;
         cursor: pointer;
@@ -715,17 +765,11 @@ def gerar_html_impressao_volante(jogo_caixa1, jogo_caixa2, calib):
 </style>
 </head>
 <body>
-    <div class="no-print">
-        <button onclick="window.print()">🖨️ Imprimir agora</button>
-        <span>Confira o alinhamento antes de imprimir de verdade. As linhas pontilhadas somem na impressão.</span>
+    <div class="barra-topo no-print">
+        <button onclick="window.print()">🖨️ Imprimir agora ({len(paginas)} folha(s) A4)</button>
+        <span>Confira o alinhamento antes de imprimir de verdade. As linhas pontilhadas e os rótulos somem na impressão.</span>
     </div>
-    <div class="folha">
-        <div class="no-print" style="top:auto; bottom:8px; left:8px; position:fixed;">
-            Guias de calibração (não imprimem)
-        </div>
-        {guia_html}
-        {marcas_html}
-    </div>
+    {folhas_html}
 </body>
 </html>"""
     return html
@@ -1143,33 +1187,72 @@ if st.session_state["jogos_gerados"]:
         unsafe_allow_html=True
     )
 
-    opcoes_jogos_volante = ["Nenhum"] + [f"Jogo {i + 1}" for i in range(len(jogos_para_exibir))]
+    modo_volante = st.radio(
+        "O que você quer ver/imprimir?",
+        options=["Todos os jogos gerados (padrão volante da Caixa)", "Escolher jogos específicos"],
+        horizontal=True,
+        key="modo_volante_radio"
+    )
 
-    col_vol1, col_vol2 = st.columns(2)
-    with col_vol1:
-        escolha_caixa1 = st.selectbox("Jogo para a Caixa 1 do volante", options=opcoes_jogos_volante, index=1 if len(opcoes_jogos_volante) > 1 else 0, key="caixa1_select")
-    with col_vol2:
-        idx_default2 = 2 if len(opcoes_jogos_volante) > 2 else 0
-        escolha_caixa2 = st.selectbox("Jogo para a Caixa 2 do volante", options=opcoes_jogos_volante, index=idx_default2, key="caixa2_select")
+    paginas_volante = []
 
-    jogo_caixa1 = None
-    jogo_caixa2 = None
-    if escolha_caixa1 != "Nenhum":
-        jogo_caixa1 = jogos_para_exibir[int(escolha_caixa1.split(" ")[1]) - 1]["jogo"]
-    if escolha_caixa2 != "Nenhum":
-        jogo_caixa2 = jogos_para_exibir[int(escolha_caixa2.split(" ")[1]) - 1]["jogo"]
+    if modo_volante == "Todos os jogos gerados (padrão volante da Caixa)":
+        # Cada folha do volante da Caixa tem 2 caixas -> agrupa os jogos 2 a 2
+        paginas_volante = montar_paginas_volante(jogos_para_exibir)
 
-    st.markdown("#### 👀 Pré-visualização (na tela)")
-    html_volante_preview = '<div class="volante-wrapper">'
-    html_volante_preview += renderizar_volante_visual(jogo_caixa1, f"Caixa 1 — {escolha_caixa1}")
-    html_volante_preview += renderizar_volante_visual(jogo_caixa2, f"Caixa 2 — {escolha_caixa2}")
-    html_volante_preview += '</div>'
-    st.markdown(html_volante_preview, unsafe_allow_html=True)
+        qtd_folhas = len(paginas_volante)
+        st.caption(
+            f"Você tem {len(jogos_para_exibir)} jogo(s), agrupados em {qtd_folhas} folha(s) A4 "
+            f"(2 caixas por folha, igual ao volante físico da Lotofácil)."
+        )
+
+        st.markdown("#### 👀 Pré-visualização (na tela)")
+        for idx, pagina in enumerate(paginas_volante):
+            st.markdown(f"**Volante {idx + 1}**")
+            html_bloco = '<div class="volante-wrapper">'
+            html_bloco += renderizar_volante_visual(pagina["jogo1"], f"Caixa 1 — {pagina['rotulo1']}")
+            if pagina["jogo2"]:
+                html_bloco += renderizar_volante_visual(pagina["jogo2"], f"Caixa 2 — {pagina['rotulo2']}")
+            else:
+                html_bloco += renderizar_volante_visual(None, "Caixa 2 — (vazia)")
+            html_bloco += '</div>'
+            st.markdown(html_bloco, unsafe_allow_html=True)
+
+    else:
+        opcoes_jogos_volante = ["Nenhum"] + [f"Jogo {i + 1}" for i in range(len(jogos_para_exibir))]
+
+        col_vol1, col_vol2 = st.columns(2)
+        with col_vol1:
+            escolha_caixa1 = st.selectbox("Jogo para a Caixa 1 do volante", options=opcoes_jogos_volante, index=1 if len(opcoes_jogos_volante) > 1 else 0, key="caixa1_select")
+        with col_vol2:
+            idx_default2 = 2 if len(opcoes_jogos_volante) > 2 else 0
+            escolha_caixa2 = st.selectbox("Jogo para a Caixa 2 do volante", options=opcoes_jogos_volante, index=idx_default2, key="caixa2_select")
+
+        jogo_caixa1 = None
+        jogo_caixa2 = None
+        if escolha_caixa1 != "Nenhum":
+            jogo_caixa1 = jogos_para_exibir[int(escolha_caixa1.split(" ")[1]) - 1]["jogo"]
+        if escolha_caixa2 != "Nenhum":
+            jogo_caixa2 = jogos_para_exibir[int(escolha_caixa2.split(" ")[1]) - 1]["jogo"]
+
+        st.markdown("#### 👀 Pré-visualização (na tela)")
+        html_volante_preview = '<div class="volante-wrapper">'
+        html_volante_preview += renderizar_volante_visual(jogo_caixa1, f"Caixa 1 — {escolha_caixa1}")
+        html_volante_preview += renderizar_volante_visual(jogo_caixa2, f"Caixa 2 — {escolha_caixa2}")
+        html_volante_preview += '</div>'
+        st.markdown(html_volante_preview, unsafe_allow_html=True)
+
+        if jogo_caixa1 or jogo_caixa2:
+            paginas_volante = [{
+                "rotulo1": escolha_caixa1, "jogo1": jogo_caixa1,
+                "rotulo2": escolha_caixa2 if jogo_caixa2 else None, "jogo2": jogo_caixa2
+            }]
 
     with st.expander("⚙️ Calibrar posição de impressão (ajuste fino em milímetros)"):
         st.caption(
             "Ajuste estes valores até as bolinhas caírem exatamente em cima dos números do seu volante físico "
-            "colado na folha A4. Faça um teste de impressão antes de imprimir de vez."
+            "colado na folha A4. A mesma calibração vale para todas as folhas. Faça um teste de impressão "
+            "em papel comum antes de imprimir por cima do volante de verdade."
         )
         calib = st.session_state["calib_volante"]
 
@@ -1188,26 +1271,29 @@ if st.session_state["jogos_gerados"]:
 
         st.session_state["calib_volante"] = calib
 
-    if jogo_caixa1 or jogo_caixa2:
+    if paginas_volante:
         html_impressao = gerar_html_impressao_volante(
-            jogo_caixa1=set(jogo_caixa1) if jogo_caixa1 else None,
-            jogo_caixa2=set(jogo_caixa2) if jogo_caixa2 else None,
+            paginas=paginas_volante,
             calib=st.session_state["calib_volante"]
         )
 
-        st.markdown("#### 🖨️ Página de impressão (A4)")
-        st.caption("Confira o alinhamento na prévia abaixo. Depois use o botão 'Imprimir agora' dentro da prévia, ou baixe o arquivo e abra no navegador para imprimir.")
+        st.markdown("#### 🖨️ Página(s) de impressão (A4)")
+        st.caption(
+            f"{len(paginas_volante)} folha(s) A4 serão impressas, uma por volante físico. "
+            "Confira o alinhamento na prévia abaixo (role para ver todas as folhas). Depois use o botão "
+            "'Imprimir agora' dentro da prévia, ou baixe o arquivo e abra no navegador para imprimir."
+        )
 
-        components.html(html_impressao, height=500, scrolling=True)
+        components.html(html_impressao, height=550, scrolling=True)
 
         st.download_button(
-            label="⬇️ Baixar página de impressão (HTML)",
+            label=f"⬇️ Baixar página(s) de impressão em HTML ({len(paginas_volante)} folha(s) A4)",
             data=html_impressao,
             file_name="volante_impressao.html",
             mime="text/html"
         )
     else:
-        st.info("Selecione ao menos um jogo em uma das caixas para gerar a página de impressão.")
+        st.info("Selecione ao menos um jogo para gerar a página de impressão.")
 
 else:
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
