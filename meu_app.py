@@ -647,53 +647,107 @@ def montar_paginas_volante(jogos):
 
 def gerar_html_impressao_volante(paginas, calib):
     """
-    Monta um HTML com uma folha A4 por PÁGINA (cada página = 1 volante físico
-    com até 2 caixas preenchidas), contendo APENAS as marcas (bolinhas) nas
-    posições calibradas — sem nenhum desenho do volante — para imprimir por
-    cima do(s) volante(s) físico(s) já colado(s) na(s) folha(s) A4.
+    Monta um HTML A4 contendo APENAS as marcas dos jogos (sem nenhum desenho
+    do volante), para imprimir por cima do(s) volante(s) físico(s) já
+    colado(s) na folha A4. Os volantes são organizados lado a lado
+    (horizontal), o máximo que couber por folha, antes de pular para a
+    próxima página.
+
+    As marcas são desenhadas como SVG (círculo preenchido), não como
+    background CSS — isso evita que a impressão saia em branco quando a
+    opção "Gráficos de segundo plano" do navegador está desligada.
     """
+    x1, y1 = calib["x1"], calib["y1"]
+    x2, y2 = calib["x2"], calib["y2"]
+    dx, dy = calib["dx"], calib["dy"]
     raio = calib["raio"]
     diametro = raio * 2
 
-    pos1_base = calcular_posicoes_mm(calib["x1"], calib["y1"], calib["dx"], calib["dy"])
-    pos2_base = calcular_posicoes_mm(calib["x2"], calib["y2"], calib["dx"], calib["dy"])
+    margem_pagina = 10.0   # mm de margem externa da folha
+    margem_bloco = 12.0    # mm de respiro ao redor de cada volante
+
+    # Caixa delimitadora (bounding box) de UM volante (caixa1 + caixa2 juntas)
+    esquerda = min(x1, x2) - margem_bloco
+    topo = min(y1, y2) - margem_bloco
+    direita = max(x1, x2) + dx * 4 + margem_bloco
+    base = max(y1, y2) + dy * 4 + margem_bloco
+
+    largura_bloco = direita - esquerda
+    altura_bloco = base - topo
+
+    largura_util = 210 - (2 * margem_pagina)
+    altura_util = 297 - (2 * margem_pagina)
+
+    colunas = max(1, int(largura_util // largura_bloco))
+    linhas = max(1, int(altura_util // altura_bloco))
+    por_pagina = colunas * linhas
+
+    # Posição de cada caixa relativa ao canto superior-esquerdo do próprio bloco
+    rel_x1, rel_y1 = x1 - esquerda, y1 - topo
+    rel_x2, rel_y2 = x2 - esquerda, y2 - topo
+
+    total_paginas_fisicas = math.ceil(len(paginas) / por_pagina)
+
+    def svg_marca(x, y):
+        return (
+            f'<svg class="marca" style="left:{x - raio}mm; top:{y - raio}mm;" '
+            f'width="{diametro}mm" height="{diametro}mm" viewBox="0 0 10 10">'
+            f'<circle cx="5" cy="5" r="5" fill="#000000"/></svg>'
+        )
+
+    def guia_ponto(x, y, num):
+        return f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
 
     folhas_html = ""
 
-    for idx, pagina in enumerate(paginas):
-        marcas_html = ""
-        guia_html = ""
+    for pagina_idx in range(total_paginas_fisicas):
+        blocos_html = ""
+        inicio = pagina_idx * por_pagina
+        fim = min(inicio + por_pagina, len(paginas))
 
-        jogo1_set = set(pagina["jogo1"]) if pagina["jogo1"] else set()
-        jogo2_set = set(pagina["jogo2"]) if pagina["jogo2"] else set()
+        for pos, idx_volante in enumerate(range(inicio, fim)):
+            pagina = paginas[idx_volante]
+            linha = pos // colunas
+            coluna = pos % colunas
 
-        for num, (x, y) in pos1_base.items():
-            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
-            if num in jogo1_set:
-                marcas_html += (
-                    f'<div class="marca" style="left:{x}mm; top:{y}mm; '
-                    f'width:{diametro}mm; height:{diametro}mm;"></div>'
-                )
+            origem_x = margem_pagina + coluna * largura_bloco
+            origem_y = margem_pagina + linha * altura_bloco
 
-        for num, (x, y) in pos2_base.items():
-            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
-            if num in jogo2_set:
-                marcas_html += (
-                    f'<div class="marca" style="left:{x}mm; top:{y}mm; '
-                    f'width:{diametro}mm; height:{diametro}mm;"></div>'
-                )
+            fx1, fy1 = origem_x + rel_x1, origem_y + rel_y1
+            fx2, fy2 = origem_x + rel_x2, origem_y + rel_y2
 
-        quebra = "always" if idx < len(paginas) - 1 else "auto"
-        rotulo_pagina = pagina["rotulo1"]
-        if pagina["rotulo2"]:
-            rotulo_pagina += f" e {pagina['rotulo2']}"
+            pos1 = calcular_posicoes_mm(fx1, fy1, dx, dy)
+            pos2 = calcular_posicoes_mm(fx2, fy2, dx, dy)
 
-        folhas_html += f"""
-    <div class="folha" style="page-break-after:{quebra};">
-        <div class="no-print rotulo-folha">Volante {idx + 1} — {rotulo_pagina}</div>
-        {guia_html}
-        {marcas_html}
-    </div>"""
+            jogo1_set = set(pagina["jogo1"]) if pagina["jogo1"] else set()
+            jogo2_set = set(pagina["jogo2"]) if pagina["jogo2"] else set()
+
+            marcas_html = ""
+            guia_html = ""
+
+            for num, (x, y) in pos1.items():
+                guia_html += guia_ponto(x, y, num)
+                if num in jogo1_set:
+                    marcas_html += svg_marca(x, y)
+
+            for num, (x, y) in pos2.items():
+                guia_html += guia_ponto(x, y, num)
+                if num in jogo2_set:
+                    marcas_html += svg_marca(x, y)
+
+            rotulo = pagina["rotulo1"]
+            if pagina["rotulo2"]:
+                rotulo += f" e {pagina['rotulo2']}"
+
+            blocos_html += (
+                f'<div class="no-print rotulo-folha" '
+                f'style="left:{origem_x}mm; top:{origem_y - 6}mm;">'
+                f'Volante {idx_volante + 1} — {rotulo}</div>'
+                f'{guia_html}{marcas_html}'
+            )
+
+        quebra = "always" if pagina_idx < total_paginas_fisicas - 1 else "auto"
+        folhas_html += f'<div class="folha" style="page-break-after:{quebra};">{blocos_html}</div>'
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -707,25 +761,24 @@ def gerar_html_impressao_volante(paginas, calib):
         padding: 0;
         width: 210mm;
         background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
     }}
     .folha {{
         position: relative;
         width: 210mm;
         height: 297mm;
+        background: white;
     }}
     .rotulo-folha {{
         position: absolute;
-        top: 4mm;
-        left: 4mm;
-        font-size: 11px;
+        font-size: 10px;
         color: #999;
         font-family: sans-serif;
     }}
     .marca {{
         position: absolute;
-        border-radius: 50%;
-        background: #000000;
-        transform: translate(-50%, -50%);
     }}
     .guia {{
         position: absolute;
@@ -742,6 +795,7 @@ def gerar_html_impressao_volante(paginas, calib):
         position: fixed;
         top: 8px;
         left: 8px;
+        right: 8px;
         z-index: 10;
         background: #111827;
         padding: 10px 14px;
@@ -767,8 +821,8 @@ def gerar_html_impressao_volante(paginas, calib):
 </head>
 <body>
     <div class="barra-topo no-print">
-        <button onclick="window.print()">🖨️ Imprimir agora ({len(paginas)} folha(s) A4)</button>
-        <span>Confira o alinhamento antes de imprimir de verdade. As linhas pontilhadas e os rótulos somem na impressão.</span>
+        <button onclick="window.print()">🖨️ Imprimir agora ({total_paginas_fisicas} folha(s) A4 · {colunas}x{linhas} volante(s) por folha)</button>
+        <span>Confira o alinhamento. As linhas pontilhadas e os rótulos somem na impressão.</span>
     </div>
     {folhas_html}
 </body>
@@ -1279,11 +1333,18 @@ if st.session_state["jogos_gerados"]:
         )
 
         st.markdown("#### 🖨️ Página(s) de impressão (A4)")
+        st.markdown(
+            '<div class="info-box">'
+            'Os volantes são organizados <strong>lado a lado (na horizontal)</strong>, o máximo que couber '
+            'em cada folha A4 de acordo com a calibração atual, antes de pular para a próxima página.'
+            '</div>',
+            unsafe_allow_html=True
+        )
         st.warning(
-            "⚠️ Importante: clicar em 'Imprimir' dentro da prévia abaixo pode sair em branco, porque essa "
-            "prévia roda dentro de uma janela isolada do Streamlit. Para imprimir de verdade, use o botão "
-            "**'Abrir para imprimir'** logo abaixo — ele abre a folha em uma aba própria do navegador, e aí "
-            "sim o Ctrl+P (ou o botão 'Imprimir agora' dentro dela) funciona corretamente."
+            "⚠️ Clique em **'Abrir para imprimir'** abaixo — ele abre a folha em uma aba própria do navegador. "
+            "É nessa aba (não dentro do app) que o Ctrl+P / botão 'Imprimir agora' funciona de verdade. "
+            "Se mesmo assim sair em branco, verifique nas opções de impressão do navegador se "
+            "**'Gráficos de segundo plano'** está marcado."
         )
 
         html_b64 = base64.b64encode(html_impressao.encode("utf-8")).decode()
@@ -1293,15 +1354,12 @@ if st.session_state["jogos_gerados"]:
             f'<a href="{href_impressao}" target="_blank" rel="noopener noreferrer">'
             f'<button style="padding:12px 20px;font-weight:800;font-size:15px;cursor:pointer;'
             f'border:none;border-radius:8px;background:#16a34a;color:white;margin:8px 0;">'
-            f'🖨️ Abrir para imprimir ({len(paginas_volante)} folha(s) A4)</button></a>',
+            f'🖨️ Abrir para imprimir ({len(paginas_volante)} volante(s))</button></a>',
             unsafe_allow_html=True
         )
 
-        st.caption("Prévia abaixo (só para conferir o alinhamento das marcas — role para ver todas as folhas):")
-        components.html(html_impressao, height=550, scrolling=True)
-
         st.download_button(
-            label=f"⬇️ Baixar página(s) de impressão em HTML ({len(paginas_volante)} folha(s) A4)",
+            label=f"⬇️ Baixar página(s) de impressão em HTML ({len(paginas_volante)} volante(s))",
             data=html_impressao,
             file_name="volante_impressao.html",
             mime="text/html"
