@@ -20,11 +20,12 @@ st.set_page_config(
 if "jogos_gerados" not in st.session_state:
     st.session_state["jogos_gerados"] = []
 
+# Variável de controle para ocultar/mostrar gabaritos
 if "esconder_gabarito" not in st.session_state:
     st.session_state["esconder_gabarito"] = False
 
 # ============================================================
-# CSS CUSTOMIZADO (ATUALIZADO COM RESET DE IMPRESSÃO INFALÍVEL)
+# CSS CUSTOMIZADO
 # ============================================================
 
 st.markdown(
@@ -66,6 +67,11 @@ st.markdown(
         color: #ffffff;
         font-weight: 900;
         margin-bottom: 16px;
+    }
+    .ultimo-local {
+        color: #ffffff;
+        font-size: 14px;
+        margin-bottom: 20px;
     }
     .dezenas-resultado-container {
         display: flex;
@@ -160,8 +166,6 @@ st.markdown(
         margin: 4px;
         box-shadow: 0 0 8px rgba(239,68,68,0.45);
     }
-
-    /* LISTA HORIZONTAL VERDE */
     .jogo-box {
         background: #111821;
         border: 1px solid #2d3b4f;
@@ -201,71 +205,6 @@ st.markdown(
         font-size: 12px;
         box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
     }
-
-    /* VOLANTES ROSA NA TELA */
-    .volante-tela-wrapper {
-        background-color: #fffde6;
-        border: 2px solid #d946ef;
-        border-radius: 12px;
-        padding: 15px;
-        max-width: 340px;
-        margin: 15px auto;
-        font-family: 'Arial', sans-serif;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    }
-    .volante-tela-header {
-        background-color: #c026d3;
-        color: #ffffff;
-        text-align: center;
-        font-weight: 900;
-        font-size: 20px;
-        padding: 6px;
-        border-radius: 6px;
-        margin-bottom: 12px;
-        letter-spacing: 2px;
-    }
-    .volante-tela-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 8px;
-        justify-items: center;
-        background-color: #fffee6;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #fbcfe8;
-    }
-    .dezena-volante-tela {
-        width: 42px;
-        height: 32px;
-        border: 1.5px solid #c026d3;
-        color: #c026d3;
-        background-color: #ffffff;
-        font-weight: bold;
-        font-size: 14px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-radius: 4px;
-    }
-    .dezena-volante-tela.marcada {
-        background: #111827 !important;
-        color: #ffffff !important;
-        border: 2px solid #111827 !important;
-        position: relative;
-    }
-    .dezena-volante-tela.marcada::after {
-        content: "X";
-        position: absolute;
-        font-size: 16px;
-        font-weight: 900;
-        color: #ff4b4b;
-    }
-    .dezena-volante-tela.acertada-gabarito {
-        border: 2px solid #ca8a04 !important;
-        background-color: #facc15 !important;
-        color: #000000 !important;
-    }
-
     .premio-card {
         background: #16222f;
         border: 1px solid #ca8a04;
@@ -288,80 +227,55 @@ st.markdown(
     }
 
     /* ============================================================
-       🚨 CORREÇÃO DA IMPRESSÃO: FORÇA FUNDO BRANCO E OCULTA O APP
+       REGRAS EXCLUSIVAS DE IMPRESSÃO (VOLANTES A4 OCULTOS NA TELA)
        ============================================================ */
+    
+    /* Na tela, esconde o bloco de impressão */
     .printable-print-area { display: none; }
 
     @media print {
-        /* 1. Reset absoluto e forçado de cores de fundo para branco em todas as tags mães do Streamlit */
-        html, body, .stApp, .main, 
-        [data-testid="stAppViewBlockContainer"], 
-        [data-testid="stMainBlockContainer"], 
-        [data-testid="stVerticalBlock"], 
-        [data-testid="stVerticalBlockRoot"] {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            color: #000000 !important;
+        /* Esconde tudo na impressão, exceto a área de impressão */
+        body * { visibility: hidden; }
+        
+        .printable-print-area, .printable-print-area * {
+            visibility: visible;
         }
 
-        /* 2. Oculta de verdade (display:none) toda a interface escura e painéis */
-        [data-testid="stSidebar"], [data-testid="stHeader"], header, footer,
-        .stButton, .stCheckbox, .stDownloadButton, h1, h2, h3, h4, h5, h6, p,
-        .jogo-box, .volante-tela-wrapper, .ultimo-sorteio, .section-divider, .info-box,
-        iframe, div.element-container {
-            display: none !important;
-            height: 0px !important;
-            margin: 0px !important;
-            padding: 0px !important;
-        }
-        
-        /* 3. Ativa e isola apenas a área alvo das marcações na folha */
         .printable-print-area {
-            display: block !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 210mm !important;
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            padding: 10mm !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 210mm;
+            padding: 20mm;
         }
 
         .volante-wrapper-print {
-            display: inline-block !important;
-            border: 0.5px dashed #777777 !important; /* Linha guia cinza para o colante */
-            width: 84mm !important;
-            height: 143mm !important;
-            margin: 8mm !important;
-            padding: 5mm !important;
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            page-break-inside: avoid !important;
+            display: inline-block;
+            border: 0.5px dashed #777777;
+            width: 84mm;
+            height: 143mm;
+            margin: 10mm;
+            padding: 5mm;
+            page-break-inside: avoid;
         }
 
         .volante-grid-print {
-            display: grid !important;
-            grid-template-columns: repeat(5, 1fr) !important;
-            gap: 4mm !important;
-            justify-items: center !important;
-            background-color: #ffffff !important;
-            background: #ffffff !important;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4mm;
+            justify-items: center;
         }
 
         .dezena-volante-print {
-            width: 10mm !important;
-            height: 8mm !important;
-            color: transparent !important;
-            border: none !important;
-            background-color: transparent !important;
-            background: transparent !important;
+            width: 10mm;
+            height: 8mm;
+            color: transparent;
+            border: none;
         }
 
-        /* 4. Quadradinho preto puro de marcação na impressora */
         .dezena-volante-print.marcada {
-            background-color: #000000 !important;
-            background: #000000 !important;
-            border-radius: 1px !important;
+            background-color: #000000;
+            border-radius: 1px;
         }
     }
 </style>
@@ -370,7 +284,7 @@ st.markdown(
 )
 
 # ============================================================
-# FUNÇÕES DE BUSCA E MOTOR DE COMBINAÇÃO
+# FUNÇÕES DE BUSCA NA CAIXA E ANÁLISE
 # ============================================================
 BASE_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
 
@@ -408,7 +322,7 @@ def analisar_concursos(concursos):
     for c in concursos: todas_dezenas.extend(c["dezenas"])
     frequencia = Counter(todas_dezenas)
     universo = [str(i).zfill(2) for i in range(1, 26)]
-    df_freq = pd.DataFrame({"dezena": universe, "frequencia": [frequencia.get(d, 0) for d in universe]})
+    df_freq = pd.DataFrame({"dezena": universo, "frequencia": [frequencia.get(d, 0) for d in universo]})
     return df_freq.sort_values(by=["frequencia", "dezena"], ascending=[False, True]).reset_index(drop=True)
 
 def calcular_atrasos(concursos):
@@ -472,12 +386,14 @@ def jogos_para_csv(jogos):
     return pd.DataFrame(linhas).to_csv(index=False, sep=";", encoding="utf-8-sig")
 
 # ============================================================
-# MONTAGEM DA TELA PRINCIPAL
+# CÓDIGO DA TELA
 # ============================================================
+st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
+
 try:
     ultimo_concurso = buscar_concurso()
 except:
-    st.error("Erro ao conectar com o barramento da Caixa Econômica.")
+    st.error("Erro na Caixa.")
     st.stop()
 
 dezenas_ultimo = ultimo_concurso["dezenas"]
@@ -498,7 +414,7 @@ soma_max = st.sidebar.number_input("Soma máxima", 120, 300, 220)
 repetidas_min, repetidas_max = st.sidebar.slider("Repetidas", 0, 15, (8, 11))
 sobreposicao_max = st.sidebar.slider("Sobreposição máxima", 8, 15, 13)
 
-with st.spinner("Analisando bases da Lotofácil..."):
+with st.spinner("Analisando..."):
     concursos = carregar_concursos(qtd_concursos)
 df_freq = analisar_concursos(concursos)
 df_atrasos = calcular_atrasos(concursos)
@@ -529,11 +445,8 @@ if st.button("🎲 Gerar Novo Desdobramento", type="primary", use_container_widt
         base_variavel, dezenas_fixas, qtd_jogos, dezenas_ultimo, mapa_freq, mapa_atraso,
         pares_min, pares_max, soma_min, soma_max, repetidas_min, repetidas_max, sobreposicao_max
     )
-    st.success("Jogos gerados com sucesso!")
+    st.success("Jogos gerados!")
 
-# ============================================================
-# EXIBIÇÃO E CONFERÊNCIA
-# ============================================================
 if st.session_state["jogos_gerados"]:
     jogos = st.session_state["jogos_gerados"]
 
@@ -560,27 +473,13 @@ if st.session_state["jogos_gerados"]:
         for i, pt in enumerate([11, 12, 13, 14, 15]):
             cp[i].markdown(f'<div class="premio-card"><div class="premio-titulo">{pt} Acertos</div><div class="premio-valor">{contadores[pt]} jg</div></div>', unsafe_allow_html=True)
 
-    # 🖨️ BOTÃO DE IMPRESSÃO EM HTML PURO (Injetado via iFrame sem quebrar o Streamlit Cloud)
-    st.markdown("<br>", unsafe_allow_html=True)
-    html_print_btn = """
-    <button onclick="window.parent.focus(); window.parent.print();" style="
-        background-color: #ef4444;
-        color: white;
-        border: none;
-        padding: 14px 20px;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        width: 100%;
-        font-size: 16px;
-        box-shadow: 0 4px 10px rgba(239,68,68,0.3);
-    ">🖨️ Executar Impressão A4 (Apenas Gabaritos de Marcação)</button>
-    """
-    components.html(html_print_btn, height=55)
-    st.caption("💡 Caso o botão seja bloqueado por segurança pelo seu navegador, pressione as teclas **Ctrl + P** juntas para abrir as opções de impressão.")
+    st.markdown("### 📋 Seus Jogos (Visualização Original)")
+    
+    # Adicionando botão que dispara a janela de impressão
+    if st.button("🖨️ Imprimir Cartões A4 (Apenas Marcações)", use_container_width=True):
+        components.html("<script>window.print();</script>", height=0, width=0)
 
-    # 1. RETORNO DA EXIBIÇÃO DA LISTA HORIZONTAL VERDE ORIGINAL
-    st.markdown("### 📋 Seus Jogos (Lista Horizontal Verde)")
+    # Renderiza o visual de blocos antigos
     for idx, item in enumerate(jogos):
         html_jogo = ""
         acertos_set = set(item["jogo"]).intersection(set(dezenas_alvo)) if (dezenas_alvo and rodar_conf and not st.session_state["esconder_gabarito"]) else set()
@@ -602,31 +501,9 @@ if st.session_state["jogos_gerados"]:
             </div>
         </div>""", unsafe_allow_html=True)
 
-    # 2. RETORNO DA VISUALIZAÇÃO COMPLETA DOS VOLANTES ROSA NA TELA
-    st.markdown("### 🎫 Visualização dos Volantes Virtuais (Conferência Visual)")
+    # Estrutura HTML Oculta gerada APENAS para a impressão (Formato Volante)
     ORDEM_VOLANTE = ["21", "16", "11", "06", "01", "22", "17", "12", "07", "02", "23", "18", "13", "08", "03", "24", "19", "14", "09", "04", "25", "20", "15", "10", "05"]
     
-    col_volantes = st.columns(3)
-    for idx, item in enumerate(jogos):
-        jogo_set = set(item["jogo"])
-        acertos_set = jogo_set.intersection(set(dezenas_alvo)) if (dezenas_alvo and rodar_conf and not st.session_state["esconder_gabarito"]) else set()
-        
-        html_volante = f'<div class="volante-tela-wrapper">'
-        html_volante += f'<div class="volante-tela-header">JOGO {idx + 1}</div>'
-        html_volante += f'<div class="volante-tela-grid">'
-        
-        for dezena in ORDEM_VOLANTE:
-            classes = "dezena-volante-tela"
-            if dezena in jogo_set: classes += " marcada"
-            if dezena in acertos_set: classes += " acertada-gabarito"
-            html_volante += f'<div class="{classes}">{dezena}</div>'
-            
-        html_volante += f'</div></div>'
-        
-        with col_volantes[idx % 3]:
-            st.markdown(html_volante, unsafe_allow_html=True)
-
-    # 3. ÁREA STRUTURADA INTERNA EXCLUSIVA PARA A IMPRESSORA A4 (OCULTA EM TELA)
     html_print = '<div class="printable-print-area">'
     for item in jogos:
         jogo_set = set(item["jogo"])
@@ -640,5 +517,4 @@ if st.session_state["jogos_gerados"]:
     
     st.markdown(html_print, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.download_button("⬇️ Baixar Planilha CSV", jogos_para_csv(jogos), "jogos.csv", "text/csv", use_container_width=True)
+    st.download_button("⬇️ Baixar CSV", jogos_para_csv(jogos), "jogos.csv", "text/csv")
