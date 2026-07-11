@@ -20,7 +20,6 @@ st.set_page_config(
 if "jogos_gerados" not in st.session_state:
     st.session_state["jogos_gerados"] = []
 
-# Variável de controle para ocultar/mostrar gabaritos
 if "esconder_gabarito" not in st.session_state:
     st.session_state["esconder_gabarito"] = False
 
@@ -166,6 +165,8 @@ st.markdown(
         margin: 4px;
         box-shadow: 0 0 8px rgba(239,68,68,0.45);
     }
+
+    /* LISTA HORIZONTAL VERDE */
     .jogo-box {
         background: #111821;
         border: 1px solid #2d3b4f;
@@ -205,6 +206,71 @@ st.markdown(
         font-size: 12px;
         box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
     }
+
+    /* VOLANTES ROSA NA TELA */
+    .volante-tela-wrapper {
+        background-color: #fffde6;
+        border: 2px solid #d946ef;
+        border-radius: 12px;
+        padding: 15px;
+        max-width: 340px;
+        margin: 15px auto;
+        font-family: 'Arial', sans-serif;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .volante-tela-header {
+        background-color: #c026d3;
+        color: #ffffff;
+        text-align: center;
+        font-weight: 900;
+        font-size: 20px;
+        padding: 6px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+    }
+    .volante-tela-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        justify-items: center;
+        background-color: #fffee6;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #fbcfe8;
+    }
+    .dezena-volante-tela {
+        width: 42px;
+        height: 32px;
+        border: 1.5px solid #c026d3;
+        color: #c026d3;
+        background-color: #ffffff;
+        font-weight: bold;
+        font-size: 14px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 4px;
+    }
+    .dezena-volante-tela.marcada {
+        background: #111827 !important;
+        color: #ffffff !important;
+        border: 2px solid #111827 !important;
+        position: relative;
+    }
+    .dezena-volante-tela.marcada::after {
+        content: "X";
+        position: absolute;
+        font-size: 16px;
+        font-weight: 900;
+        color: #ff4b4b;
+    }
+    .dezena-volante-tela.acertada-gabarito {
+        border: 2px solid #ca8a04 !important;
+        background-color: #facc15 !important;
+        color: #000000 !important;
+    }
+
     .premio-card {
         background: #16222f;
         border: 1px solid #ca8a04;
@@ -230,11 +296,11 @@ st.markdown(
        REGRAS EXCLUSIVAS DE IMPRESSÃO (VOLANTES A4 OCULTOS NA TELA)
        ============================================================ */
     
-    /* Na tela, esconde o bloco de impressão */
+    /* Na tela, esconde a folha de impressão em preto e branco */
     .printable-print-area { display: none; }
 
     @media print {
-        /* Esconde tudo na impressão, exceto a área de impressão */
+        /* Esconde o painel normal na hora de imprimir */
         body * { visibility: hidden; }
         
         .printable-print-area, .printable-print-area * {
@@ -251,7 +317,7 @@ st.markdown(
 
         .volante-wrapper-print {
             display: inline-block;
-            border: 0.5px dashed #777777;
+            border: 0.5px dashed #777777; /* Guia de corte/colagem */
             width: 84mm;
             height: 143mm;
             margin: 10mm;
@@ -273,6 +339,7 @@ st.markdown(
             border: none;
         }
 
+        /* Pinta apenas as marcações de preto sólido */
         .dezena-volante-print.marcada {
             background-color: #000000;
             border-radius: 1px;
@@ -284,7 +351,7 @@ st.markdown(
 )
 
 # ============================================================
-# FUNÇÕES DE BUSCA NA CAIXA E ANÁLISE
+# FUNÇÕES DE BUSCA E ANÁLISE
 # ============================================================
 BASE_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
 
@@ -386,7 +453,7 @@ def jogos_para_csv(jogos):
     return pd.DataFrame(linhas).to_csv(index=False, sep=";", encoding="utf-8-sig")
 
 # ============================================================
-# CÓDIGO DA TELA
+# CÓDIGO DA TELA E UI
 # ============================================================
 st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
 
@@ -473,13 +540,33 @@ if st.session_state["jogos_gerados"]:
         for i, pt in enumerate([11, 12, 13, 14, 15]):
             cp[i].markdown(f'<div class="premio-card"><div class="premio-titulo">{pt} Acertos</div><div class="premio-valor">{contadores[pt]} jg</div></div>', unsafe_allow_html=True)
 
-    st.markdown("### 📋 Seus Jogos (Visualização Original)")
-    
-    # Adicionando botão que dispara a janela de impressão
-    if st.button("🖨️ Imprimir Cartões A4 (Apenas Marcações)", use_container_width=True):
-        components.html("<script>window.print();</script>", height=0, width=0)
+    # Botão de Impressão via script HTML (robusto)
+    st.markdown("<br>", unsafe_allow_html=True)
+    html_print_btn = """
+    <script>
+    function imprimirFolha() {
+        window.parent.print();
+    }
+    </script>
+    <button onclick="imprimirFolha()" style="
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        font-family: inherit;
+        font-size: 16px;
+    ">🖨️ Imprimir Cartões A4 (Apenas Marcações pretas)</button>
+    """
+    components.html(html_print_btn, height=55)
+    st.caption("💡 Se o botão não responder no seu navegador, pressione **Ctrl + P** no teclado. Recomendado: Desativar Cabeçalhos/Rodapés nas configurações de impressão.")
 
-    # Renderiza o visual de blocos antigos
+    st.markdown("### 📋 Seus Jogos (Lista Horizontal)")
+    
+    # 1. RENDERIZAÇÃO DA LISTA HORIZONTAL VERDE
     for idx, item in enumerate(jogos):
         html_jogo = ""
         acertos_set = set(item["jogo"]).intersection(set(dezenas_alvo)) if (dezenas_alvo and rodar_conf and not st.session_state["esconder_gabarito"]) else set()
@@ -501,9 +588,33 @@ if st.session_state["jogos_gerados"]:
             </div>
         </div>""", unsafe_allow_html=True)
 
-    # Estrutura HTML Oculta gerada APENAS para a impressão (Formato Volante)
+
+    st.markdown("### 🎫 Visualização dos Volantes (Estilo Caixa)")
     ORDEM_VOLANTE = ["21", "16", "11", "06", "01", "22", "17", "12", "07", "02", "23", "18", "13", "08", "03", "24", "19", "14", "09", "04", "25", "20", "15", "10", "05"]
     
+    # 2. RENDERIZAÇÃO DOS VOLANTES ROSA NA TELA
+    col_volantes = st.columns(3) # Coloca em 3 colunas para economizar espaço
+    for idx, item in enumerate(jogos):
+        jogo_set = set(item["jogo"])
+        acertos_set = jogo_set.intersection(set(dezenas_alvo)) if (dezenas_alvo and rodar_conf and not st.session_state["esconder_gabarito"]) else set()
+        
+        html_volante = f'<div class="volante-tela-wrapper">'
+        html_volante += f'<div class="volante-tela-header">JOGO {idx + 1}</div>'
+        html_volante += f'<div class="volante-tela-grid">'
+        
+        for dezena in ORDEM_VOLANTE:
+            classes = "dezena-volante-tela"
+            if dezena in jogo_set: classes += " marcada"
+            if dezena in acertos_set: classes += " acertada-gabarito"
+            html_volante += f'<div class="{classes}">{dezena}</div>'
+            
+        html_volante += f'</div></div>'
+        
+        with col_volantes[idx % 3]:
+            st.markdown(html_volante, unsafe_allow_html=True)
+
+
+    # 3. RENDERIZAÇÃO OCULTA EXCLUSIVA PARA A IMPRESSORA A4
     html_print = '<div class="printable-print-area">'
     for item in jogos:
         jogo_set = set(item["jogo"])
@@ -517,4 +628,5 @@ if st.session_state["jogos_gerados"]:
     
     st.markdown(html_print, unsafe_allow_html=True)
 
+    st.markdown("<br>", unsafe_allow_html=True)
     st.download_button("⬇️ Baixar CSV", jogos_para_csv(jogos), "jogos.csv", "text/csv")
