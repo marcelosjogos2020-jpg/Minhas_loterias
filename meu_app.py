@@ -274,6 +274,30 @@ st.markdown(
     }
 
     /* ---------- VOLANTE VISUAL (pré-visualização na tela) ---------- */
+    .volante-grid-geral {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 26px;
+        align-items: flex-start;
+    }
+
+    .volante-grupo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #0d1420;
+        border: 1px solid #2d3b4f;
+        border-radius: 12px;
+        padding: 12px;
+    }
+
+    .volante-grupo-titulo {
+        color: #93c5fd;
+        font-weight: 800;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
     .volante-wrapper {
         display: flex;
         gap: 22px;
@@ -1262,16 +1286,18 @@ if st.session_state["jogos_gerados"]:
         )
 
         st.markdown("#### 👀 Pré-visualização (na tela)")
+        html_geral = '<div class="volante-grid-geral">'
         for idx, pagina in enumerate(paginas_volante):
-            st.markdown(f"**Volante {idx + 1}**")
-            html_bloco = '<div class="volante-wrapper">'
-            html_bloco += renderizar_volante_visual(pagina["jogo1"], f"Caixa 1 — {pagina['rotulo1']}")
+            html_geral += f'<div class="volante-grupo"><div class="volante-grupo-titulo">Volante {idx + 1}</div>'
+            html_geral += '<div class="volante-wrapper">'
+            html_geral += renderizar_volante_visual(pagina["jogo1"], f"Caixa 1 — {pagina['rotulo1']}")
             if pagina["jogo2"]:
-                html_bloco += renderizar_volante_visual(pagina["jogo2"], f"Caixa 2 — {pagina['rotulo2']}")
+                html_geral += renderizar_volante_visual(pagina["jogo2"], f"Caixa 2 — {pagina['rotulo2']}")
             else:
-                html_bloco += renderizar_volante_visual(None, "Caixa 2 — (vazia)")
-            html_bloco += '</div>'
-            st.markdown(html_bloco, unsafe_allow_html=True)
+                html_geral += renderizar_volante_visual(None, "Caixa 2 — (vazia)")
+            html_geral += '</div></div>'
+        html_geral += '</div>'
+        st.markdown(html_geral, unsafe_allow_html=True)
 
     else:
         opcoes_jogos_volante = ["Nenhum"] + [f"Jogo {i + 1}" for i in range(len(jogos_para_exibir))]
