@@ -1,14 +1,14 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import requests
 import itertools
 import math
-import streamlit.components.v1 as components
 from collections import Counter
 from datetime import datetime
 
 # ============================================================
-# CONFIGURAÇÃO DA PÁGINA E ESTADO
+# CONFIGURAÇÃO DA PÁGINA
 # ============================================================
 
 st.set_page_config(
@@ -17,15 +17,28 @@ st.set_page_config(
     layout="wide"
 )
 
+# ============================================================
+# ESTADO DA SESSÃO (SESSION STATE)
+# ============================================================
 if "jogos_gerados" not in st.session_state:
     st.session_state["jogos_gerados"] = []
 
-# Variável de controle para ocultar/mostrar gabaritos
-if "esconder_gabarito" not in st.session_state:
-    st.session_state["esconder_gabarito"] = False
+# Calibração da posição de impressão do volante (em milímetros)
+# Esses valores representam o CENTRO do número 21 (canto sup. esquerdo)
+# de cada caixa do volante físico já colado na folha A4.
+if "calib_volante" not in st.session_state:
+    st.session_state["calib_volante"] = {
+        "x1": 25.0,   # Caixa 1 - posição X do número 21
+        "y1": 42.0,   # Caixa 1 - posição Y do número 21
+        "x2": 25.0,   # Caixa 2 - posição X do número 21
+        "y2": 150.0,  # Caixa 2 - posição Y do número 21
+        "dx": 12.5,   # espaçamento horizontal entre colunas
+        "dy": 8.0,    # espaçamento vertical entre linhas
+        "raio": 2.2   # raio da marca impressa
+    }
 
 # ============================================================
-# CSS CUSTOMIZADO
+# CSS
 # ============================================================
 
 st.markdown(
@@ -35,19 +48,23 @@ st.markdown(
         background-color: #0b111a;
         color: #ffffff;
     }
+
     .main {
         background-color: #0b111a;
     }
+
     h1, h2, h3 {
         color: #ffffff;
         font-weight: 900;
     }
+
     .subtitulo {
         font-size: 22px;
         color: #ffffff;
         font-weight: 800;
         margin-bottom: 24px;
     }
+
     .ultimo-sorteio {
         border: 2px solid #1e88ff;
         border-radius: 12px;
@@ -56,23 +73,31 @@ st.markdown(
         background: linear-gradient(90deg, #111827, #162033);
         box-shadow: 0 0 14px rgba(30,136,255,0.28);
     }
+
     .ultimo-label {
         font-size: 14px;
         color: #93c5fd;
         font-weight: 800;
         margin-bottom: 12px;
     }
+
     .ultimo-concurso {
         font-size: 22px;
         color: #ffffff;
         font-weight: 900;
         margin-bottom: 16px;
     }
+
     .ultimo-local {
         color: #ffffff;
         font-size: 14px;
         margin-bottom: 20px;
     }
+
+    .ultimo-local strong {
+        color: #ffffff;
+    }
+
     .dezenas-resultado-container {
         display: flex;
         flex-wrap: wrap;
@@ -80,6 +105,7 @@ st.markdown(
         align-items: center;
         margin-top: 8px;
     }
+
     .dezena-resultado {
         display: inline-flex;
         justify-content: center;
@@ -92,8 +118,12 @@ st.markdown(
         font-weight: 900;
         font-size: 13px;
         border: 2px solid rgba(255,255,255,0.18);
-        box-shadow: 0 0 10px rgba(34,197,94,0.45);
+        box-shadow:
+            0 0 10px rgba(34,197,94,0.45),
+            inset 0 2px 5px rgba(255,255,255,0.25),
+            inset 0 -4px 8px rgba(0,0,0,0.22);
     }
+
     .info-box {
         background: #1c2d45;
         border-left: 4px solid #1e88ff;
@@ -104,6 +134,7 @@ st.markdown(
         font-size: 14px;
         font-weight: 700;
     }
+
     .metric-card {
         background: #111821;
         border: 1px solid #2d3b4f;
@@ -112,20 +143,24 @@ st.markdown(
         text-align: center;
         min-height: 95px;
     }
+
     .metric-label {
         font-size: 13px;
         color: #9bd1ff;
         margin-bottom: 12px;
     }
+
     .metric-value {
         color: #2f83ff;
         font-size: 24px;
         font-weight: 900;
     }
+
     .section-divider {
         border-top: 1px solid #2d3b4f;
         margin: 30px 0;
     }
+
     .dezena-base {
         display: inline-flex;
         justify-content: center;
@@ -139,6 +174,8 @@ st.markdown(
         margin: 4px;
         box-shadow: 0 0 8px rgba(30,136,255,0.45);
     }
+
+    /* Estilo para destacar as dezenas fixas na base */
     .dezena-fixa-painel {
         display: inline-flex;
         justify-content: center;
@@ -153,6 +190,7 @@ st.markdown(
         border: 2px solid #818cf8;
         box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
     }
+
     .dezena-fria {
         display: inline-flex;
         justify-content: center;
@@ -166,6 +204,7 @@ st.markdown(
         margin: 4px;
         box-shadow: 0 0 8px rgba(239,68,68,0.45);
     }
+
     .jogo-box {
         background: #111821;
         border: 1px solid #2d3b4f;
@@ -173,11 +212,13 @@ st.markdown(
         padding: 14px;
         margin-bottom: 10px;
     }
+
     .jogo-titulo {
         color: #93c5fd;
         font-weight: 800;
         margin-bottom: 8px;
     }
+
     .dezena-jogo {
         display: inline-flex;
         justify-content: center;
@@ -191,6 +232,7 @@ st.markdown(
         margin: 3px;
         font-size: 12px;
     }
+
     .dezena-acerto {
         display: inline-flex;
         justify-content: center;
@@ -205,6 +247,7 @@ st.markdown(
         font-size: 12px;
         box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
     }
+
     .premio-card {
         background: #16222f;
         border: 1px solid #ca8a04;
@@ -221,81 +264,103 @@ st.markdown(
         font-weight: 900;
         color: #facc15;
     }
-    .stDownloadButton button, .stButton button {
+
+    .stDownloadButton button {
+        background-color: #16a34a !important;
+        color: white !important;
         border-radius: 8px;
         font-weight: 800;
     }
 
-    /* ============================================================
-       REGRAS EXCLUSIVAS DE IMPRESSÃO (VOLANTES A4 OCULTOS NA TELA)
-       ============================================================ */
-    
-    /* Na tela, esconde o bloco de impressão */
-    .printable-print-area { display: none; }
+    /* ---------- VOLANTE VISUAL (pré-visualização na tela) ---------- */
+    .volante-wrapper {
+        display: flex;
+        gap: 22px;
+        flex-wrap: wrap;
+    }
 
-    @media print {
-        /* Esconde tudo na impressão, exceto a área de impressão */
-        body * { visibility: hidden; }
-        
-        .printable-print-area, .printable-print-area * {
-            visibility: visible;
-        }
+    .volante-caixa {
+        background: #fdf6d8;
+        border: 2px solid #c9a94f;
+        border-radius: 10px;
+        padding: 16px;
+        max-width: 260px;
+    }
 
-        .printable-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 210mm;
-            padding: 20mm;
-        }
+    .volante-titulo {
+        color: #5c4a1a;
+        font-weight: 900;
+        margin-bottom: 10px;
+        text-align: center;
+        font-size: 13px;
+    }
 
-        .volante-wrapper-print {
-            display: inline-block;
-            border: 0.5px dashed #777777;
-            width: 84mm;
-            height: 143mm;
-            margin: 10mm;
-            padding: 5mm;
-            page-break-inside: avoid;
-        }
+    .volante-linha {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 6px;
+        justify-content: center;
+    }
 
-        .volante-grid-print {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 4mm;
-            justify-items: center;
-        }
+    .volante-cel {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #fffbe8;
+        border: 2px solid #c9a94f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 12px;
+        color: #5c4a1a;
+    }
 
-        .dezena-volante-print {
-            width: 10mm;
-            height: 8mm;
-            color: transparent;
-            border: none;
-        }
-
-        .dezena-volante-print.marcada {
-            background-color: #000000;
-            border-radius: 1px;
-        }
+    .volante-cel-marcada {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #5cff75, #16a34a 65%, #0f7a35);
+        border: 2px solid #0f7a35;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 12px;
+        color: white;
+        box-shadow: 0 0 8px rgba(34,197,94,0.55);
     }
 </style>
-""",
+    """,
     unsafe_allow_html=True
 )
 
 # ============================================================
-# FUNÇÕES DE BUSCA NA CAIXA E ANÁLISE
+# FUNÇÕES DE BUSCA NA CAIXA
 # ============================================================
+
 BASE_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
+
 
 @st.cache_data(ttl=600)
 def buscar_concurso(numero=None):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    url = BASE_URL if numero is None else f"{BASE_URL}/{numero}"
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json,text/plain,*/*"
+    }
+
+    if numero is None:
+        url = BASE_URL
+    else:
+        url = f"{BASE_URL}/{numero}"
+
     response = requests.get(url, headers=headers, timeout=20)
     response.raise_for_status()
     dados = response.json()
-    dezenas = [str(d).zfill(2) for d in dados.get("listaDezenas", [])]
+
+    dezenas = dados.get("listaDezenas", [])
+    dezenas = [str(d).zfill(2) for d in dezenas]
+
     return {
         "numero": dados.get("numero"),
         "data": dados.get("dataApuracao"),
@@ -305,216 +370,990 @@ def buscar_concurso(numero=None):
         "raw": dados
     }
 
+
 @st.cache_data(ttl=600)
 def carregar_concursos(qtd):
     ultimo = buscar_concurso()
     numero_ultimo = int(ultimo["numero"])
+
     concursos = []
+
     for numero in range(numero_ultimo, numero_ultimo - qtd, -1):
         try:
             concurso = buscar_concurso(numero)
-            if concurso["dezenas"]: concursos.append(concurso)
-        except: continue
+            if concurso["dezenas"]:
+                concursos.append(concurso)
+        except Exception:
+            continue
+
     return concursos
+
+
+# ============================================================
+# FUNÇÕES DE ANÁLISE
+# ============================================================
 
 def analisar_concursos(concursos):
     todas_dezenas = []
-    for c in concursos: todas_dezenas.extend(c["dezenas"])
+
+    for concurso in concursos:
+        todas_dezenas.extend(concurso["dezenas"])
+
     frequencia = Counter(todas_dezenas)
+
     universo = [str(i).zfill(2) for i in range(1, 26)]
-    df_freq = pd.DataFrame({"dezena": universo, "frequencia": [frequencia.get(d, 0) for d in universo]})
-    return df_freq.sort_values(by=["frequencia", "dezena"], ascending=[False, True]).reset_index(drop=True)
+
+    df_freq = pd.DataFrame({
+        "dezena": universo,
+        "frequencia": [frequencia.get(dezena, 0) for dezena in universo]
+    })
+
+    df_freq = df_freq.sort_values(
+        by=["frequencia", "dezena"],
+        ascending=[False, True]
+    ).reset_index(drop=True)
+
+    return df_freq
+
 
 def calcular_atrasos(concursos):
     universo = [str(i).zfill(2) for i in range(1, 26)]
     atrasos = {}
+
     for dezena in universo:
         atraso = 0
-        for c in concursos:
-            if dezena in c["dezenas"]: break
-            atraso += 1
-        atrasos[dezena] = atraso
-    df_atrasos = pd.DataFrame({"dezena": list(atrasos.keys()), "atraso": list(atrasos.values())})
-    return df_atrasos.sort_values(by=["atraso", "dezena"], ascending=[False, True]).reset_index(drop=True)
 
-def estatisticas_jogo(jogo, ultimo_resultado):
+        for concurso in concursos:
+            if dezena in concurso["dezenas"]:
+                break
+            atraso += 1
+
+        atrasos[dezena] = atraso
+
+    df_atrasos = pd.DataFrame({
+        "dezena": list(atrasos.keys()),
+        "atraso": list(atrasos.values())
+    })
+
+    df_atrasos = df_atrasos.sort_values(
+        by=["atraso", "dezena"],
+        ascending=[False, True]
+    ).reset_index(drop=True)
+
+    return df_atrasos
+
+
+def staticas_jogo(jogo, ultimo_resultado):
     numeros = [int(x) for x in jogo]
+
     pares = sum(1 for n in numeros if n % 2 == 0)
-    return {"pares": pares, "impares": 15 - pares, "soma": sum(numeros), "repetidas_ultimo": len(set(jogo).intersection(set(ultimo_resultado)))}
+    impares = 15 - pares
+    soma = sum(numeros)
+    repetidas_ultimo = len(set(jogo).intersection(set(ultimo_resultado)))
+
+    return {
+        "pares": pares,
+        "impares": impares,
+        "soma": soma,
+        "repetidas_ultimo": repetidas_ultimo
+    }
+
 
 def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
-    return sum(mapa_freq.get(d, 0) for d in jogo) + sum(mapa_atraso.get(d, 0) for d in jogo) * 0.25
+    score_freq = sum(mapa_freq.get(d, 0) for d in jogo)
+    score_atraso = sum(mapa_atraso.get(d, 0) for d in jogo)
 
-def gerar_desdobramento_com_fixos(base_variavel, fixos, qtd_jogos, ultimo_resultado, mapa_freq, mapa_atraso, p_min, p_max, s_min, s_max, r_min, r_max, sob_max):
-    vagas = 15 - len(fixos)
-    combinacoes = list(itertools.combinations(base_variavel, vagas))
+    return score_freq + score_atraso * 0.25
+
+
+# 🚀 Motor de combinação adaptado para injetar dezenas fixas de forma limpa e performática
+def gerar_desdobramento_com_fixos(
+    base_variavel,
+    fixos,
+    qtd_jogos,
+    ultimo_resultado,
+    mapa_freq,
+    mapa_atraso,
+    pares_min,
+    pares_max,
+    soma_min,
+    soma_max,
+    repetidas_min,
+    repetidas_max,
+    sobreposicao_max
+):
+    vagas_restantes = 15 - len(fixos)
+    combinacoes_variaveis = list(itertools.combinations(base_variavel, vagas_restantes))
+
     jogos_validos = []
 
-    for combo in combinacoes:
+    for combo in combinacoes_variaveis:
         jogo = sorted(list(fixos) + list(combo), key=lambda x: int(x))
-        stats = estatisticas_jogo(jogo, ultimo_resultado)
-        if not (p_min <= stats["pares"] <= p_max): continue
-        if not (s_min <= stats["soma"] <= s_max): continue
-        if not (r_min <= stats["repetidas_ultimo"] <= r_max): continue
-        
-        pontos = pontuar_jogo(jogo, mapa_freq, mapa_atraso)
-        jogos_validos.append({"jogo": jogo, "score": pontos, **stats})
+        stats = staticas_jogo(jogo, ultimo_resultado)
 
-    jogos_validos.sort(key=lambda x: x["score"], reverse=True)
+        if not (pares_min <= stats["pares"] <= pares_max):
+            continue
+
+        if not (soma_min <= stats["soma"] <= soma_max):
+            continue
+
+        if not (repetidas_min <= stats["repetidas_ultimo"] <= repetidas_max):
+            continue
+
+        pontos = pontuar_jogo(jogo, mapa_freq, mapa_atraso)
+
+        jogos_validos.append({
+            "jogo": jogo,
+            "score": pontos,
+            "pares": stats["pares"],
+            "impares": stats["impares"],
+            "soma": stats["soma"],
+            "repetidas_ultimo": stats["repetidas_ultimo"]
+        })
+
+    jogos_validos = sorted(jogos_validos, key=lambda x: x["score"], reverse=True)
+
     selecionados = []
+
     for item in jogos_validos:
+        jogo_atual = set(item["jogo"])
+
         if not selecionados:
             selecionados.append(item)
         else:
-            if all(len(set(item["jogo"]).intersection(set(s["jogo"]))) <= sob_max for s in selecionados):
+            aprovado = True
+
+            for selecionado in selecionados:
+                intersecao = len(jogo_atual.intersection(set(selecionado["jogo"])))
+
+                if intersecao > sobreposicao_max:
+                    aprovado = False
+                    break
+
+            if aprovado:
                 selecionados.append(item)
-        if len(selecionados) >= qtd_jogos: break
+
+        if len(selecionados) >= qtd_jogos:
+            break
 
     if len(selecionados) < qtd_jogos:
         for item in jogos_validos:
-            if item not in selecionados: selecionados.append(item)
-            if len(selecionados) >= qtd_jogos: break
+            if item not in selecionados:
+                selecionados.append(item)
+
+            if len(selecionados) >= qtd_jogos:
+                break
 
     return selecionados[:qtd_jogos]
 
+
 def jogos_para_csv(jogos):
     linhas = []
+
     for idx, item in enumerate(jogos, start=1):
-        linha = {"Jogo": idx, "Dezenas": " ".join(item["jogo"]), "Pares": item["pares"], "Ímpares": item["impares"], "Soma": item["soma"], "Repetidas": item["repetidas_ultimo"], "Score": round(item["score"], 2)}
-        for p, d in enumerate(item["jogo"], start=1): linha[f"D{p:02d}"] = d
+        linha = {
+            "Jogo": idx,
+            "Dezenas": " ".join(item["jogo"]),
+            "Pares": item["pares"],
+            "Ímpares": item["impares"],
+            "Soma": item["soma"],
+            "Repetidas do último": item["repetidas_ultimo"],
+            "Score": round(item["score"], 2)
+        }
+
+        for pos, dezena in enumerate(item["jogo"], start=1):
+            linha[f"D{pos:02d}"] = dezena
+
         linhas.append(linha)
+
     return pd.DataFrame(linhas).to_csv(index=False, sep=";", encoding="utf-8-sig")
 
+
 # ============================================================
-# CÓDIGO DA TELA
+# FUNÇÕES DO VOLANTE (visual em tela + impressão A4 só com as marcas)
 # ============================================================
+
+def numero_da_celula(linha, coluna):
+    """
+    Reproduz a disposição oficial do volante da Lotofácil:
+    coluna 0 (esquerda) = 21..25 | coluna 4 (direita) = 01..05
+    """
+    return (4 - coluna) * 5 + (linha + 1)
+
+
+def renderizar_volante_visual(jogo, titulo):
+    """Gera o HTML de um volante (grade 5x5) com os números do jogo pintados."""
+    jogo_set = set(jogo) if jogo else set()
+
+    linhas_html = ""
+    for r in range(5):
+        celulas_html = ""
+        for c in range(5):
+            numero = numero_da_celula(r, c)
+            num_str = str(numero).zfill(2)
+            marcado = num_str in jogo_set
+            classe = "volante-cel-marcada" if marcado else "volante-cel"
+            celulas_html += f'<div class="{classe}">{num_str}</div>'
+        linhas_html += f'<div class="volante-linha">{celulas_html}</div>'
+
+    html = (
+        f'<div class="volante-caixa">'
+        f'<div class="volante-titulo">{titulo}</div>'
+        f'<div>{linhas_html}</div>'
+        f'</div>'
+    )
+    return html
+
+
+def calcular_posicoes_mm(x0, y0, dx, dy):
+    """Retorna {dezena: (x_mm, y_mm)} para uma das duas caixas do volante."""
+    posicoes = {}
+    for c in range(5):
+        for r in range(5):
+            numero = numero_da_celula(r, c)
+            x = x0 + c * dx
+            y = y0 + r * dy
+            posicoes[str(numero).zfill(2)] = (round(x, 2), round(y, 2))
+    return posicoes
+
+
+def gerar_html_impressao_volante(jogo_caixa1, jogo_caixa2, calib):
+    """
+    Monta uma página HTML tamanho A4 contendo APENAS as marcas (bolinhas),
+    nas posições calibradas, para ser impressa por cima do volante físico
+    já colado na folha A4. Nenhum fundo/imagem do volante é desenhado.
+    """
+    raio = calib["raio"]
+    diametro = raio * 2
+
+    marcas_html = ""
+    guia_html = ""
+
+    if jogo_caixa1:
+        pos1 = calcular_posicoes_mm(calib["x1"], calib["y1"], calib["dx"], calib["dy"])
+        for num, (x, y) in pos1.items():
+            if num in jogo_caixa1:
+                marcas_html += (
+                    f'<div class="marca" style="left:{x}mm; top:{y}mm; '
+                    f'width:{diametro}mm; height:{diametro}mm;"></div>'
+                )
+        for num, (x, y) in pos1.items():
+            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
+
+    if jogo_caixa2:
+        pos2 = calcular_posicoes_mm(calib["x2"], calib["y2"], calib["dx"], calib["dy"])
+        for num, (x, y) in pos2.items():
+            if num in jogo_caixa2:
+                marcas_html += (
+                    f'<div class="marca" style="left:{x}mm; top:{y}mm; '
+                    f'width:{diametro}mm; height:{diametro}mm;"></div>'
+                )
+        for num, (x, y) in pos2.items():
+            guia_html += f'<div class="guia" style="left:{x}mm; top:{y}mm;">{num}</div>'
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Volante para impressão</title>
+<style>
+    @page {{ size: A4; margin: 0; }}
+    html, body {{
+        margin: 0;
+        padding: 0;
+        width: 210mm;
+        height: 297mm;
+        background: white;
+    }}
+    .folha {{
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+    }}
+    .marca {{
+        position: absolute;
+        border-radius: 50%;
+        background: #000000;
+        transform: translate(-50%, -50%);
+    }}
+    .guia {{
+        position: absolute;
+        width: 2mm;
+        height: 2mm;
+        font-size: 2mm;
+        color: #bbbbbb;
+        border: 0.15mm dashed #cccccc;
+        border-radius: 50%;
+        text-align: center;
+        transform: translate(-50%, -50%);
+    }}
+    .no-print {{
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 10;
+        background: #111827;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-family: sans-serif;
+        color: white;
+    }}
+    .no-print button {{
+        padding: 8px 16px;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        background: #16a34a;
+        color: white;
+        margin-right: 8px;
+    }}
+    @media print {{
+        .no-print {{ display: none !important; }}
+        .guia {{ display: none !important; }}
+    }}
+</style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">🖨️ Imprimir agora</button>
+        <span>Confira o alinhamento antes de imprimir de verdade. As linhas pontilhadas somem na impressão.</span>
+    </div>
+    <div class="folha">
+        <div class="no-print" style="top:auto; bottom:8px; left:8px; position:fixed;">
+            Guias de calibração (não imprimem)
+        </div>
+        {guia_html}
+        {marcas_html}
+    </div>
+</body>
+</html>"""
+    return html
+
+
+# ============================================================
+# CABEÇALHO
+# ============================================================
+
 st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
+st.markdown(
+    '<div class="subtitulo">Painel estatístico com base nos últimos concursos analisados</div>',
+    unsafe_allow_html=True
+)
+
+# ============================================================
+# ÚLTIMO SORTEIO NO TOPO
+# ============================================================
 
 try:
     ultimo_concurso = buscar_concurso()
-except:
-    st.error("Erro na Caixa.")
+except Exception as erro:
+    st.error("Não foi possível carregar o último concurso automaticamente da Caixa.")
     st.stop()
 
+numero_ultimo = ultimo_concurso["numero"]
+data_ultimo = ultimo_concurso["data"]
 dezenas_ultimo = ultimo_concurso["dezenas"]
 
+municipio_sorteio = ultimo_concurso["municipio"]
+local_sorteio = ultimo_concurso["local"]
+
+if municipio_sorteio:
+    texto_local = municipio_sorteio
+elif local_sorteio:
+    texto_local = local_sorteio
+else:
+    texto_local = "Local não informado"
+
+html_dezenas_resultado = "".join(
+    [f'<span class="dezena-resultado">{dezena}</span>' for dezena in dezenas_ultimo]
+)
+
+html_ultimo_sorteio = (
+    f'<div class="ultimo-sorteio">'
+    f'<div class="ultimo-label">🍀 Último sorteio carregado automaticamente da Caixa</div>'
+    f'<div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>'
+    f'<div class="ultimo-local">Sorteio realizado em: <strong>{texto_local}</strong></div>'
+    f'<div class="dezenas-resultado-container">{html_dezenas_resultado}</div>'
+    f'</div>'
+)
+
+st.markdown(html_ultimo_sorteio, unsafe_allow_html=True)
+
+# ============================================================
+# SIDEBAR
+# ============================================================
+
 st.sidebar.header("⚙️ Configurações")
-qtd_concursos = st.sidebar.number_input("Concursos analisados", 5, 100, 11)
-tamanho_base = st.sidebar.number_input("Tamanho da base (Total números jogados)", 15, 25, 20)
-qtd_jogos = st.sidebar.number_input("Qtd de jogos gerados", 1, 100, 12)
+
+qtd_concursos = st.sidebar.number_input(
+    "Quantidade de concursos para análise",
+    min_value=5,
+    max_value=100,
+    value=11,
+    step=1
+)
+
+tamanho_base = st.sidebar.number_input(
+    "Tamanho da base sugerida (Total de números jogados)",
+    min_value=15,
+    max_value=25,
+    value=20,
+    step=1
+)
+
+qtd_jogos = st.sidebar.number_input(
+    "Quantidade de jogos no desdobramento",
+    min_value=1,
+    max_value=100,
+    value=12,
+    step=1
+)
 
 st.sidebar.divider()
-dezenas_fixas = st.sidebar.multiselect("Dezenas FIXAS (Máx 5)", [str(i).zfill(2) for i in range(1, 26)], max_selections=5)
-dezenas_para_descartar = st.sidebar.multiselect("Dezenas descartadas", [str(i).zfill(2) for i in range(1, 26) if str(i).zfill(2) not in dezenas_fixas])
+
+# 🚀 Seletor de 1 a 5 números fixos travados em todos os bilhetes.
+# Cada dezena fixa ocupa 1 vaga do "tamanho_base", então o pool de
+# números variáveis diminui automaticamente conforme você trava mais fixos.
+dezenas_fixas = st.sidebar.multiselect(
+    "Dezenas FIXAS (Presentes em todos os bilhetes - Máx 5)",
+    options=[str(i).zfill(2) for i in range(1, 25 + 1)],
+    default=[],
+    max_selections=5
+)
+
+dezenas_para_descartar = st.sidebar.multiselect(
+    "Dezenas temporariamente descartadas",
+    options=[str(i).zfill(2) for i in range(1, 26) if str(i).zfill(2) not in dezenas_fixas],
+    default=[]
+)
 
 st.sidebar.divider()
-pares_min, pares_max = st.sidebar.slider("Pares", 0, 15, (6, 9))
-soma_min = st.sidebar.number_input("Soma mínima", 120, 300, 170)
-soma_max = st.sidebar.number_input("Soma máxima", 120, 300, 220)
-repetidas_min, repetidas_max = st.sidebar.slider("Repetidas", 0, 15, (8, 11))
-sobreposicao_max = st.sidebar.slider("Sobreposição máxima", 8, 15, 13)
 
-with st.spinner("Analisando..."):
+st.sidebar.subheader("Filtros combinatórios")
+
+pares_min = st.sidebar.slider("Mínimo de pares", min_value=0, max_value=15, value=6)
+pares_max = st.sidebar.slider("Máximo de pares", min_value=0, max_value=15, value=9)
+
+soma_min = st.sidebar.number_input("Soma mínima", min_value=120, max_value=300, value=170, step=1)
+soma_max = st.sidebar.number_input("Soma máxima", min_value=120, max_value=300, value=220, step=1)
+
+repetidas_min = st.sidebar.slider("Mínimo de repetidas do último concurso", min_value=0, max_value=15, value=8)
+repetidas_max = st.sidebar.slider("Máximo de repetidas do último concurso", min_value=0, max_value=15, value=11)
+
+sobreposicao_max = st.sidebar.slider("Sobreposição máxima entre jogos", min_value=8, max_value=15, value=13)
+
+# ============================================================
+# CARREGAMENTO DOS CONCURSOS
+# ============================================================
+
+with st.spinner("Carregando concursos da Caixa..."):
     concursos = carregar_concursos(qtd_concursos)
+
+if not concursos:
+    st.error("Nenhum concurso foi carregado.")
+    st.stop()
+
 df_freq = analisar_concursos(concursos)
 df_atrasos = calcular_atrasos(concursos)
+
 mapa_freq = dict(zip(df_freq["dezena"], df_freq["frequencia"]))
 mapa_atraso = dict(zip(df_atrasos["dezena"], df_atrasos["atraso"]))
 
-opcoes_concurso = {f"Concurso {c['numero']} ({c['data']})": c['dezenas'] for c in concursos}
+opcoes_concurso = {}
+for c in concursos:
+    opcoes_concurso[f"Concurso {c['numero']} ({c['data']})"] = c['dezenas']
 opcoes_concurso["Inserir Dezenas Manualmente"] = []
 
-st.markdown("## 📊 Visão Geral")
-c1, c2 = st.columns(2)
-with c1:
-    st.markdown("### 🔥 Fortes")
-    st.markdown("".join([f'<span class="dezena-base">{r["dezena"]}</span>' for _, r in df_freq.head(10).iterrows()]), unsafe_allow_html=True)
-with c2:
-    st.markdown("### 🧊 Atrasadas")
-    st.markdown("".join([f'<span class="dezena-fria">{r["dezena"]}</span>' for _, r in df_atrasos.head(10).iterrows()]), unsafe_allow_html=True)
+# ============================================================
+# VISÃO GERAL DA ANÁLISE
+# ============================================================
 
-st.markdown("## 🎯 Base Sugerida")
-df_base = df_freq[~df_freq["dezena"].isin(dezenas_para_descartar + dezenas_fixas)]
-base_variavel = df_base.head(tamanho_base - len(dezenas_fixas))["dezena"].tolist()
-base_sugerida = sorted(list(set(base_variavel + dezenas_fixas)), key=lambda x: int(x))
-st.markdown("".join([f'<span class="{"dezena-fixa-painel" if d in dezenas_fixas else "dezena-base"}">{d}</span>' for d in base_sugerida]), unsafe_allow_html=True)
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 📊 Visão Geral da Análise")
 
-st.markdown("## 🧩 Desdobramento")
-if st.button("🎲 Gerar Novo Desdobramento", type="primary", use_container_width=True):
-    st.session_state["jogos_gerados"] = gerar_desdobramento_com_fixos(
-        base_variavel, dezenas_fixas, qtd_jogos, dezenas_ultimo, mapa_freq, mapa_atraso,
-        pares_min, pares_max, soma_min, soma_max, repetidas_min, repetidas_max, sobreposicao_max
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("### 🔥 Dezenas mais fortes")
+
+    dezenas_fortes = df_freq.head(10)
+
+    html_fortes = ""
+
+    for _, row in dezenas_fortes.iterrows():
+        html_fortes += f'<span class="dezena-base">{row["dezena"]}</span>'
+
+    st.markdown(html_fortes, unsafe_allow_html=True)
+
+    st.dataframe(
+        dezenas_fortes.rename(
+            columns={
+                "dezena": "Dezena",
+                "frequencia": "Frequência"
+            }
+        ),
+        use_container_width=True,
+        hide_index=True
     )
-    st.success("Jogos gerados!")
+
+with col2:
+    st.markdown(f"### 📈 Frequência das dezenas nos últimos {len(concursos)} concursos")
+
+    grafico_freq = df_freq.copy()
+    grafico_freq = grafico_freq.sort_values("dezena")
+
+    st.bar_chart(
+        grafico_freq,
+        x="dezena",
+        y="frequencia",
+        use_container_width=True
+    )
+
+# ============================================================
+# ATRASOS
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🧊 Dezenas em atraso")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    dezenas_atrasadas = df_atrasos.head(10)
+
+    html_atrasadas = ""
+
+    for _, row in dezenas_atrasadas.iterrows():
+        html_atrasadas += f'<span class="dezena-fria">{row["dezena"]}</span>'
+
+    st.markdown(html_atrasadas, unsafe_allow_html=True)
+
+    st.dataframe(
+        dezenas_atrasadas.rename(
+            columns={
+                "dezena": "Dezena",
+                "atraso": "Concursos sem sair"
+            }
+        ),
+        use_container_width=True,
+        hide_index=True
+    )
+
+with col2:
+    grafico_atrasos = df_atrasos.copy()
+    grafico_atrasos = grafico_atrasos.sort_values("dezena")
+
+    st.bar_chart(
+        grafico_atrasos,
+        x="dezena",
+        y="atraso",
+        use_container_width=True
+    )
+
+# ============================================================
+# BASE SUGERIDA (ADAPTADA PARA NÚMEROS FIXOS)
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🎯 Base sugerida")
+
+df_base = df_freq.copy()
+
+# Remove descartadas e fixas para calcular o pool de variáveis puras
+exclusoes_pool = dezenas_para_descartar + dezenas_fixas
+if exclusoes_pool:
+    df_base = df_base[~df_base["dezena"].isin(exclusoes_pool)]
+
+# Vagas livres para números que vão variar no fechamento
+vagas_variaveis = tamanho_base - len(dezenas_fixas)
+base_variavel = df_base.head(vagas_variaveis)["dezena"].tolist()
+
+# União montada e ordenada para exibição completa
+base_sugerida_completa = sorted(list(set(base_variavel + dezenas_fixas)), key=lambda x: int(x))
+
+html_base = ""
+for dezena in base_sugerida_completa:
+    if dezena in dezenas_fixas:
+        html_base += f'<span class="dezena-fixa-painel">{dezena}</span>'
+    else:
+        html_base += f'<span class="dezena-base">{dezena}</span>'
+
+st.markdown(html_base, unsafe_allow_html=True)
+
+if dezenas_fixas:
+    st.info(
+        f"📌 As dezenas destacadas em **Roxo/Azul** são as suas fixas travadas em todos os jogos "
+        f"({len(dezenas_fixas)}/5 usadas). Elas ocupam vagas do tamanho da base, então o pool de "
+        f"números variáveis foi ajustado para {vagas_variaveis} dezenas."
+    )
+if dezenas_para_descartar:
+    st.warning("Dezenas descartadas temporariamente: " + ", ".join(dezenas_para_descartar))
+
+# ============================================================
+# GERAÇÃO DO DESDOBRAMENTO
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🧩 Geração de jogos")
+
+vagas_restantes_jogo = 15 - len(dezenas_fixas)
+
+if len(base_sugerida_completa) < 15:
+    st.error("A sua base sugerida total precisa atingir no mínimo 15 dezenas combinadas.")
+elif len(base_variavel) < vagas_restantes_jogo:
+    st.error(f"Você precisa de pelo menos {vagas_restantes_jogo} números variáveis disponíveis no pool para completar as vagas livres.")
+else:
+    total_combinacoes_base = math.comb(len(base_variavel), vagas_restantes_jogo)
+
+    st.info(
+        f"A sua estratégia atual fixa {len(dezenas_fixas)} números e combina as outras {vagas_restantes_jogo} vagas "
+        f"em cima das {len(base_variavel)} dezenas variáveis da sua base. Total de caminhos no fechamento: "
+        f"{total_combinacoes_base:,}".replace(",", ".") + " combinações."
+    )
+
+    if st.button("🎲 Gerar Novo Desdobramento", use_container_width=True, type="primary"):
+        st.session_state["jogos_gerados"] = gerar_desdobramento_com_fixos(
+            base_variavel=base_variavel,
+            fixos=dezenas_fixas,
+            qtd_jogos=qtd_jogos,
+            ultimo_resultado=dezenas_ultimo,
+            mapa_freq=mapa_freq,
+            mapa_atraso=mapa_atraso,
+            pares_min=pares_min,
+            pares_max=pares_max,
+            soma_min=soma_min,
+            soma_max=soma_max,
+            repetidas_min=repetidas_min,
+            repetidas_max=repetidas_max,
+            sobreposicao_max=sobreposicao_max
+        )
+        if not st.session_state["jogos_gerados"]:
+            st.warning("Nenhum jogo foi encontrado com os filtros atuais. Tente flexibilizar os critérios na lateral.")
+        else:
+            st.success(f"{len(st.session_state['jogos_gerados'])} jogos gerados com sucesso travando as dezenas fixas!")
+
+# ============================================================
+# IMPRESSÃO E CENTRAL DE CONFERÊNCIA
+# ============================================================
 
 if st.session_state["jogos_gerados"]:
-    jogos = st.session_state["jogos_gerados"]
+    jogos_para_exibir = st.session_state["jogos_gerados"]
 
-    st.markdown("## 🎟️ Conferência")
-    st.checkbox("Ocultar resultados visuais da conferência (apenas jogos limpos)", key="esconder_gabarito")
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown("## 🎟️ Conferência de Acertos")
 
-    col_s, col_b = st.columns([3, 1])
-    sel_conc = col_s.selectbox("Selecione para conferir:", list(opcoes_concurso.keys()), label_visibility="collapsed")
+    col_conf1, col_conferir_btn = st.columns([3, 1])
+    with col_conf1:
+        selecao_concurso = st.selectbox(
+            "Selecione o concurso para conferir seus jogos atuais:",
+            options=list(opcoes_concurso.keys()),
+            label_visibility="collapsed"
+        )
+
     dezenas_alvo = []
-    if sel_conc == "Inserir Dezenas Manualmente":
-        d_man = st.text_input("Dezenas separadas por espaço:")
-        if d_man: dezenas_alvo = [d.zfill(2) for d in d_man.strip().split()][:15]
-    else: dezenas_alvo = opcoes_concurso[sel_conc]
+    if selecao_concurso == "Inserir Dezenas Manualmente":
+        dezenas_manuais_input = st.text_input("Digite 15 dezenas separadas por espaço (ex: 01 02 03...):")
+        if dezenas_manuais_input:
+            dezenas_alvo = [d.zfill(2) for d in dezenas_manuais_input.strip().split() if d.isdigit()][:15]
+    else:
+        dezenas_alvo = opcoes_concurso[selecao_concurso]
 
-    rodar_conf = col_b.button("🔍 Rodar Conferência", use_container_width=True)
+    if dezenas_alvo:
+        html_gabarito = "".join([f'<span class="dezena-resultado">{d}</span>' for d in dezenas_alvo])
+        st.markdown(f"<div style='margin-bottom:15px;'><strong>Gabarito de Sorteio:</strong><br>{html_gabarito}</div>", unsafe_allow_html=True)
 
-    if not st.session_state["esconder_gabarito"] and dezenas_alvo and rodar_conf:
-        contadores = {11: 0, 12: 0, 13: 0, 14: 0, 15: 0}
-        for item in jogos:
-            acertos = len(set(item["jogo"]).intersection(set(dezenas_alvo)))
-            if acertos in contadores: contadores[acertos] += 1
-        st.markdown("### 🏆 Premiações")
-        cp = st.columns(5)
-        for i, pt in enumerate([11, 12, 13, 14, 15]):
-            cp[i].markdown(f'<div class="premio-card"><div class="premio-titulo">{pt} Acertos</div><div class="premio-valor">{contadores[pt]} jg</div></div>', unsafe_allow_html=True)
+    rodar_conferencia = col_conferir_btn.button("🔍 Rodar Conferência", use_container_width=True)
 
-    st.markdown("### 📋 Seus Jogos (Visualização Original)")
-    
-    # Adicionando botão que dispara a janela de impressão
-    if st.button("🖨️ Imprimir Cartões A4 (Apenas Marcações)", use_container_width=True):
-        components.html("<script>window.print();</script>", height=0, width=0)
+    contadores_premios = {11: 0, 12: 0, 13: 0, 14: 0, 15: 0}
+    mapa_acertos_jogos = {}
 
-    # Renderiza o visual de blocos antigos
-    for idx, item in enumerate(jogos):
+    if dezenas_alvo:
+        for idx, item in enumerate(jogos_para_exibir):
+            acertos = set(item["jogo"]).intersection(set(dezenas_alvo))
+            qtd_acertos = len(acertos)
+            mapa_acertos_jogos[idx] = acertos
+            if qtd_acertos in contadores_premios:
+                contadores_premios[qtd_acertos] += 1
+
+        if rodar_conferencia:
+            st.markdown("### 🏆 Painel de Premiações")
+            c_p1, c_p2, c_p3, c_p4, c_p5 = st.columns(5)
+            c_p1.markdown(f'<div class="premio-card"><div class="premio-titulo">11 Acertos</div><div class="premio-valor">{contadores_premios[11]} jg</div></div>', unsafe_allow_html=True)
+            c_p2.markdown(f'<div class="premio-card"><div class="premio-titulo">12 Acertos</div><div class="premio-valor">{contadores_premios[12]} jg</div></div>', unsafe_allow_html=True)
+            c_p3.markdown(f'<div class="premio-card"><div class="premio-titulo">13 Acertos</div><div class="premio-valor">{contadores_premios[13]} jg</div></div>', unsafe_allow_html=True)
+            c_p4.markdown(f'<div class="premio-card"><div class="premio-titulo">14 Acertos</div><div class="premio-valor">{contadores_premios[14]} jg</div></div>', unsafe_allow_html=True)
+            c_p5.markdown(f'<div class="premio-card"><div class="premio-titulo">15 Acertos</div><div class="premio-valor">{contadores_premios[15]} jg</div></div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("### 📋 Seus Jogos Atuais")
+    for idx, item in enumerate(jogos_para_exibir):
         html_jogo = ""
-        acertos_set = set(item["jogo"]).intersection(set(dezenas_alvo)) if (dezenas_alvo and rodar_conf and not st.session_state["esconder_gabarito"]) else set()
-        
+        acertos_desse_jogo = mapa_acertos_jogos.get(idx, set()) if dezenas_alvo else set()
+
         for dezena in item["jogo"]:
-            if dezena in acertos_set:
+            if dezena in acertos_desse_jogo and rodar_conferencia:
                 html_jogo += f'<span class="dezena-acerto">{dezena}</span>'
             else:
                 html_jogo += f'<span class="dezena-jogo">{dezena}</span>'
 
-        texto_acertos = f' | Acertos: <strong style="color:#facc15;">{len(acertos_set)}</strong>' if acertos_set else ""
-        
-        st.markdown(f"""
-        <div class="jogo-box">
-            <div class="jogo-titulo">Jogo {idx + 1}</div>
-            <div>{html_jogo}</div>
-            <div style="margin-top:10px;color:#cbd5e1;font-size:13px;">
-                Pares: <strong>{item['pares']}</strong> | Ímpares: <strong>{item['impares']}</strong> | Soma: <strong>{item['soma']}</strong> | Repetidas: <strong>{item['repetidas_ultimo']}</strong> {texto_acertos}
-            </div>
-        </div>""", unsafe_allow_html=True)
+        texto_conferencia_stats = ""
+        if dezenas_alvo and rodar_conferencia:
+            texto_conferencia_stats = f' | Premiação: <strong style="color:#facc15;font-size:14px;">{len(acertos_desse_jogo)} ACERTOS</strong>'
 
-    # Estrutura HTML Oculta gerada APENAS para a impressão (Formato Volante)
-    ORDEM_VOLANTE = ["21", "16", "11", "06", "01", "22", "17", "12", "07", "02", "23", "18", "13", "08", "03", "24", "19", "14", "09", "04", "25", "20", "15", "10", "05"]
-    
-    html_print = '<div class="printable-print-area">'
-    for item in jogos:
-        jogo_set = set(item["jogo"])
-        html_print += '<div class="volante-wrapper-print"><div class="volante-grid-print">'
-        for d in ORDEM_VOLANTE:
-            classe = "dezena-volante-print"
-            if d in jogo_set: classe += " marcada"
-            html_print += f'<div class="{classe}"></div>'
-        html_print += '</div></div>'
-    html_print += '</div>'
-    
-    st.markdown(html_print, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+<div class="jogo-box">
+    <div class="jogo-titulo">Jogo {idx + 1} {"🌟 (Contém Fixos)" if dezenas_fixas else ""}</div>
+    <div>{html_jogo}</div>
+    <div style="margin-top:10px;color:#cbd5e1;font-size:13px;">
+        Pares: <strong>{item["pares"]}</strong> |
+        Ímpares: <strong>{item["impares"]}</strong> |
+        Soma: <strong>{item["soma"]}</strong> |
+        Repetidas do último: <strong>{item["repetidas_ultimo"]}</strong> |
+        Score: <strong>{round(item["score"], 2)}</strong>{texto_conferencia_stats}
+    </div>
+</div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.download_button("⬇️ Baixar CSV", jogos_para_csv(jogos), "jogos.csv", "text/csv")
+    csv = jogos_para_csv(jogos_para_exibir)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.download_button(
+        label="⬇️ Baixar desdobramento ativo em CSV",
+        data=csv,
+        file_name="desdobramento_lotofacil.csv",
+        mime="text/csv"
+    )
+
+    # ============================================================
+    # VOLANTE VISUAL + IMPRESSÃO EM A4 (SÓ AS MARCAS)
+    # ============================================================
+
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown("## 🎫 Volante — Visualizar e Imprimir")
+    st.markdown(
+        '<div class="info-box">'
+        'Escolha até 2 jogos para preencher as duas caixas do volante (igual ao cartão físico da Lotofácil). '
+        'A pré-visualização abaixo mostra os números pintados. Na hora de imprimir, a folha A4 sai '
+        '<strong>apenas com as bolinhas de marcação</strong> — sem o volante desenhado — para você imprimir '
+        'por cima do volante físico que já está colado na folha A4.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    opcoes_jogos_volante = ["Nenhum"] + [f"Jogo {i + 1}" for i in range(len(jogos_para_exibir))]
+
+    col_vol1, col_vol2 = st.columns(2)
+    with col_vol1:
+        escolha_caixa1 = st.selectbox("Jogo para a Caixa 1 do volante", options=opcoes_jogos_volante, index=1 if len(opcoes_jogos_volante) > 1 else 0, key="caixa1_select")
+    with col_vol2:
+        idx_default2 = 2 if len(opcoes_jogos_volante) > 2 else 0
+        escolha_caixa2 = st.selectbox("Jogo para a Caixa 2 do volante", options=opcoes_jogos_volante, index=idx_default2, key="caixa2_select")
+
+    jogo_caixa1 = None
+    jogo_caixa2 = None
+    if escolha_caixa1 != "Nenhum":
+        jogo_caixa1 = jogos_para_exibir[int(escolha_caixa1.split(" ")[1]) - 1]["jogo"]
+    if escolha_caixa2 != "Nenhum":
+        jogo_caixa2 = jogos_para_exibir[int(escolha_caixa2.split(" ")[1]) - 1]["jogo"]
+
+    st.markdown("#### 👀 Pré-visualização (na tela)")
+    html_volante_preview = '<div class="volante-wrapper">'
+    html_volante_preview += renderizar_volante_visual(jogo_caixa1, f"Caixa 1 — {escolha_caixa1}")
+    html_volante_preview += renderizar_volante_visual(jogo_caixa2, f"Caixa 2 — {escolha_caixa2}")
+    html_volante_preview += '</div>'
+    st.markdown(html_volante_preview, unsafe_allow_html=True)
+
+    with st.expander("⚙️ Calibrar posição de impressão (ajuste fino em milímetros)"):
+        st.caption(
+            "Ajuste estes valores até as bolinhas caírem exatamente em cima dos números do seu volante físico "
+            "colado na folha A4. Faça um teste de impressão antes de imprimir de vez."
+        )
+        calib = st.session_state["calib_volante"]
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            calib["x1"] = st.number_input("Caixa 1 — X do número 21 (mm)", value=float(calib["x1"]), step=0.5, format="%.1f")
+            calib["y1"] = st.number_input("Caixa 1 — Y do número 21 (mm)", value=float(calib["y1"]), step=0.5, format="%.1f")
+        with c2:
+            calib["x2"] = st.number_input("Caixa 2 — X do número 21 (mm)", value=float(calib["x2"]), step=0.5, format="%.1f")
+            calib["y2"] = st.number_input("Caixa 2 — Y do número 21 (mm)", value=float(calib["y2"]), step=0.5, format="%.1f")
+        with c3:
+            calib["dx"] = st.number_input("Espaçamento entre colunas (mm)", value=float(calib["dx"]), step=0.1, format="%.1f")
+            calib["dy"] = st.number_input("Espaçamento entre linhas (mm)", value=float(calib["dy"]), step=0.1, format="%.1f")
+
+        calib["raio"] = st.slider("Raio da marca impressa (mm)", min_value=1.0, max_value=4.0, value=float(calib["raio"]), step=0.1)
+
+        st.session_state["calib_volante"] = calib
+
+    if jogo_caixa1 or jogo_caixa2:
+        html_impressao = gerar_html_impressao_volante(
+            jogo_caixa1=set(jogo_caixa1) if jogo_caixa1 else None,
+            jogo_caixa2=set(jogo_caixa2) if jogo_caixa2 else None,
+            calib=st.session_state["calib_volante"]
+        )
+
+        st.markdown("#### 🖨️ Página de impressão (A4)")
+        st.caption("Confira o alinhamento na prévia abaixo. Depois use o botão 'Imprimir agora' dentro da prévia, ou baixe o arquivo e abra no navegador para imprimir.")
+
+        components.html(html_impressao, height=500, scrolling=True)
+
+        st.download_button(
+            label="⬇️ Baixar página de impressão (HTML)",
+            data=html_impressao,
+            file_name="volante_impressao.html",
+            mime="text/html"
+        )
+    else:
+        st.info("Selecione ao menos um jogo em uma das caixas para gerar a página de impressão.")
+
+else:
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.info("💡 Alinhou a estratégia de fixos e filtros na barra esquerda? Clique em 'Gerar Novo Desdobramento' para processar os bilhetes.")
+
+# ============================================================
+# LEITURA COMBINATÓRIA
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🧠 Leitura combinatória")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("### Distribuição par/ímpar")
+    if st.session_state["jogos_gerados"]:
+        df_paridade = pd.DataFrame(st.session_state["jogos_gerados"])
+        st.dataframe(
+            df_paridade[["pares", "impares", "soma", "repetidas_ultimo"]].rename(
+                columns={
+                    "pares": "Pares",
+                    "impares": "Ímpares",
+                    "soma": "Soma",
+                    "repetidas_ultimo": "Repetidas do último"
+                }
+            ),
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.caption("Gere jogos para visualizar esta leitura.")
+
+with col2:
+    st.markdown("### Repetição do último concurso")
+    if st.session_state["jogos_gerados"]:
+        repeticoes = [j["repetidas_ultimo"] for j in st.session_state["jogos_gerados"]]
+        df_repeticoes = pd.DataFrame({"Repetidas": repeticoes})
+        st.bar_chart(df_repeticoes, y="Repetidas", use_container_width=True)
+    else:
+        st.caption("Gere jogos para visualizar esta leitura.")
+
+with col3:
+    st.markdown("### Faixa de soma")
+    if st.session_state["jogos_gerados"]:
+        somas = [j["soma"] for j in st.session_state["jogos_gerados"]]
+        st.metric("Menor soma", min(somas))
+        st.metric("Maior soma", max(somas))
+        st.metric("Média", round(sum(somas) / len(somas), 2))
+    else:
+        st.caption("Gere jogos para visualizar esta leitura.")
+
+# ============================================================
+# HISTÓRICO CARREGADO
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+with st.expander("📚 Ver concursos analisados"):
+    linhas_historico = []
+
+    for concurso in concursos:
+        linhas_historico.append({
+            "Concurso": concurso["numero"],
+            "Data": concurso["data"],
+            "Dezenas": " ".join(concurso["dezenas"])
+        })
+
+    st.dataframe(
+        pd.DataFrame(linhas_historico),
+        use_container_width=True,
+        hide_index=True
+    )
+
+# ============================================================
+# RESUMO FINAL DA PÁGINA
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 📌 Resumo do painel")
+
+st.markdown(
+    """
+<div class="info-box">
+    Este painel reúne uma análise estatística feita para a Lotofácil, incluindo frequência das dezenas,
+    seleção de base, dezenas fixas e móveis, descartes automáticos, geração controlada, conferência integrada de acertos
+    e agora também visualização e impressão do volante.
+</div>
+    """,
+    unsafe_allow_html=True
+)
+
+total_combinacoes_lotofacil = math.comb(25, 15)
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Concursos analisados</div>
+    <div class="metric-value">{len(concursos)}</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col2:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Total de combinações da Lotofácil</div>
+    <div class="metric-value">{total_combinacoes_lotofacil:,}</div>
+</div>
+        """.replace(",", ","),
+        unsafe_allow_html=True
+    )
+
+with col3:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Tamanho da sua base</div>
+    <div class="metric-value">{len(base_sugerida_completa)} nros</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col4:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Desdobramento ativo</div>
+    <div class="metric-value">{len(st.session_state["jogos_gerados"])} jogos</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown(
+    """
+<br>
+<div style="color:#94a3b8;font-size:13px;text-align:center;">
+    Análise estatística e combinatória. Este painel não garante premiação e não substitui a decisão pessoal de aposta.
+</div>
+    """,
+    unsafe_allow_html=True
+)
