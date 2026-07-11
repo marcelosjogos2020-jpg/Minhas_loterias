@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import itertools
 import math
+import base64
 from collections import Counter
 from datetime import datetime
 
@@ -1278,12 +1279,25 @@ if st.session_state["jogos_gerados"]:
         )
 
         st.markdown("#### 🖨️ Página(s) de impressão (A4)")
-        st.caption(
-            f"{len(paginas_volante)} folha(s) A4 serão impressas, uma por volante físico. "
-            "Confira o alinhamento na prévia abaixo (role para ver todas as folhas). Depois use o botão "
-            "'Imprimir agora' dentro da prévia, ou baixe o arquivo e abra no navegador para imprimir."
+        st.warning(
+            "⚠️ Importante: clicar em 'Imprimir' dentro da prévia abaixo pode sair em branco, porque essa "
+            "prévia roda dentro de uma janela isolada do Streamlit. Para imprimir de verdade, use o botão "
+            "**'Abrir para imprimir'** logo abaixo — ele abre a folha em uma aba própria do navegador, e aí "
+            "sim o Ctrl+P (ou o botão 'Imprimir agora' dentro dela) funciona corretamente."
         )
 
+        html_b64 = base64.b64encode(html_impressao.encode("utf-8")).decode()
+        href_impressao = f"data:text/html;base64,{html_b64}"
+
+        st.markdown(
+            f'<a href="{href_impressao}" target="_blank" rel="noopener noreferrer">'
+            f'<button style="padding:12px 20px;font-weight:800;font-size:15px;cursor:pointer;'
+            f'border:none;border-radius:8px;background:#16a34a;color:white;margin:8px 0;">'
+            f'🖨️ Abrir para imprimir ({len(paginas_volante)} folha(s) A4)</button></a>',
+            unsafe_allow_html=True
+        )
+
+        st.caption("Prévia abaixo (só para conferir o alinhamento das marcas — role para ver todas as folhas):")
         components.html(html_impressao, height=550, scrolling=True)
 
         st.download_button(
