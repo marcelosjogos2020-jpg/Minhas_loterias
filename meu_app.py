@@ -1,1189 +1,1033 @@
-```python
-import pandas as pd
-
-filepath = 'ativo-fiis.xlsx'
-xls = pd.ExcelFile(filepath)
-print("Sheet names:", xls.sheet_names)
-
-df = pd.read_excel(filepath)
-print("\nFirst few rows:")
-print(df.head())
-print("\nColumns:")
-print(df.columns.tolist())
-
-
-```
-
-```text
-Sheet names: ['Planilha1', 'Planilha2', 'Planilha3']
-
-First few rows:
-     VGIA11  Unnamed: 1  Unnamed: 2  Unnamed: 3  Unnamed: 4  Unnamed: 5  Unnamed: 6  Unnamed: 7 Unnamed: 8 Unnamed: 9  Unnamed: 10  Unnamed: 11  Unnamed: 12  Unnamed: 13  Unnamed: 14  Unnamed: 15  Unnamed: 16  Unnamed: 17
-0        97         NaN         NaN         NaN         NaN         NaN         NaN         NaN        NaN        NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN
-1         0         NaN         NaN         NaN         NaN         NaN         NaN         NaN        NaN        NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN
-2         0         NaN         NaN         NaN         NaN         NaN         NaN         NaN        NaN        NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN
-3        97         NaN         NaN         NaN         NaN         NaN         NaN         NaN        NaN        NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN
-4  R$ 10,02         NaN         NaN         NaN         NaN         NaN         NaN         NaN        NaN        NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN          NaN
-
-Columns:
-['VGIA11', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13', 'Unnamed: 14', 'Unnamed: 15', 'Unnamed: 16', 'Unnamed: 17']
-
-
-```
-
-```python
-for sheet in xls.sheet_names:
-    print(f"\n--- Sheet: {sheet} ---")
-    df_sheet = pd.read_excel(filepath, sheet_name=sheet, header=None)
-    print(df_sheet.iloc[:10, :10])
-
-
-```
-
-```text
-
---- Sheet: Planilha1 ---
-           0   1   2   3   4   5   6   7    8    9
-0     VGIA11 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-1         97 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-2          0 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-3          0 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-4         97 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-5   R$ 10,02 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-6  R$ 971,94 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-7     MXRF11 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-8         65 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-9          0 NaN NaN NaN NaN NaN NaN NaN  NaN  NaN
-
---- Sheet: Planilha2 ---
-           0
-0     VGIA11
-1         97
-2          0
-3          0
-4         97
-5   R$ 10,02
-6  R$ 971,94
-7     MXRF11
-8         65
-9          0
-
---- Sheet: Planilha3 ---
-        0                1               2         3           4               5        6
-0   Ativo  Qtd. disponível  Qtd. projetada  Qtd. dia  Qtd. total  Última cotação  Posição
-1  VGIA11                1               0         0           1           10.02   971.94
-2  MXRF11                1               0         0           1            9.54    620.1
-3  RZAT11                1               0         0           1           88.51   442.55
-4  TGAR11                1               0         0           1              93      372
-5  CYCR11                1               0         0           1            8.85   238.95
-6  GGRC11                1               0         0           1             9.9    227.7
-7  BRCR11                1               0         0           1           45.95    183.8
-8  HGBS11                1               0         0           1              20      160
-9  RZTR11                1               0         0           1           97.99    97.99
-
-
-```
-
-```python
-df3 = pd.read_excel(filepath, sheet_name='Planilha3')
-print(df3)
-
-
-```
-
-```text
-     Ativo  Qtd. disponível  Qtd. projetada  Qtd. dia  Qtd. total  Última cotação  Posição
-0   VGIA11                1               0         0           1           10.02   971.94
-1   MXRF11                1               0         0           1            9.54   620.10
-2   RZAT11                1               0         0           1           88.51   442.55
-3   TGAR11                1               0         0           1           93.00   372.00
-4   CYCR11                1               0         0           1            8.85   238.95
-5   GGRC11                1               0         0           1            9.90   227.70
-6   BRCR11                1               0         0           1           45.95   183.80
-7   HGBS11                1               0         0           1           20.00   160.00
-8   RZTR11                1               0         0           1           97.99    97.99
-9   VGHF11                1               0         0           1            7.23    57.84
-10  MCRE11                1               0         0           1            9.20    46.00
-11  BLMG11                1               0         0           1           34.70    34.70
-12  SNAG11                1               0         0           1           11.14    33.42
-13  HCTR11                1               0         0           1           21.00    21.00
-14  GARE11                1               0         0           1            9.06    18.12
-15  XPCA11                1               0         0           1            8.45    16.90
-
-
-```
-
-```python
-import openpyxl
-
-wb = openpyxl.load_workbook(filepath, data_only=True)
-sheet = wb['Planilha3']
-for r in range(1, 5):
-    row_vals = [sheet.cell(row=r, column=c).value for column, c in enumerate(range(1, 8))]
-    print(f"Row {r}: {row_vals}")
-
-print("\nLet's check without data_only=True to see if they are formulas:")
-wb_form = openpyxl.load_workbook(filepath, data_only=False)
-sheet_form = wb_form['Planilha3']
-for r in range(1, 5):
-    row_vals = [sheet_form.cell(row=r, column=c).value for column, c in enumerate(range(1, 8))]
-    print(f"Row {r}: {row_vals}")
-
-
-```
-
-```text
-Row 1: ['Ativo', 'Qtd. disponível', 'Qtd. projetada', 'Qtd. dia', 'Qtd. total', 'Última cotação', 'Posição']
-Row 2: ['VGIA11', 1, 0, 0, 1, 10.02, 971.94]
-Row 3: ['MXRF11', 1, 0, 0, 1, 9.54, 620.1]
-Row 4: ['RZAT11', 1, 0, 0, 1, 88.51, 442.55]
-
-Let's check without data_only=True to see if they are formulas:
-Row 1: ['Ativo', 'Qtd. disponível', 'Qtd. projetada', 'Qtd. dia', 'Qtd. total', 'Última cotação', 'Posição']
-Row 2: ['VGIA11', 1, 0, 0, 1, 10.02, 971.94]
-Row 3: ['MXRF11', 1, 0, 0, 1, 9.54, 620.1]
-Row 4: ['RZAT11', 1, 0, 0, 1, 88.51, 442.55]
-
-
-```
-
-```python
-df1 = pd.read_excel(filepath, sheet_name='Planilha1', header=None)
-print(df1.iloc[:20, :5])
-
-
-```
-
-```text
-            0   1   2   3   4
-0      VGIA11 NaN NaN NaN NaN
-1          97 NaN NaN NaN NaN
-2           0 NaN NaN NaN NaN
-3           0 NaN NaN NaN NaN
-4          97 NaN NaN NaN NaN
-5    R$ 10,02 NaN NaN NaN NaN
-6   R$ 971,94 NaN NaN NaN NaN
-7      MXRF11 NaN NaN NaN NaN
-8          65 NaN NaN NaN NaN
-9           0 NaN NaN NaN NaN
-10          0 NaN NaN NaN NaN
-11         65 NaN NaN NaN NaN
-12    R$ 9,54 NaN NaN NaN NaN
-13  R$ 620,10 NaN NaN NaN NaN
-14     RZAT11 NaN NaN NaN NaN
-15          5 NaN NaN NaN NaN
-16          0 NaN NaN NaN NaN
-17          0 NaN NaN NaN NaN
-18          5 NaN NaN NaN NaN
-19   R$ 88,51 NaN NaN NaN NaN
-
-
-```
-
-```python
-print("Total rows in Planilha1:", len(df1))
-# Let's group them by chunks of 7 and print a few to verify
-for i in range(0, len(df1), 7):
-    chunk = df1.iloc[i:i+7, 0].tolist()
-    print(f"Asset {i//7}: {chunk}")
-
-
-```
-
-```text
-Total rows in Planilha1: 112
-Asset 0: ['VGIA11', 97, 0, 0, 97, 'R$\xa010,02', 'R$\xa0971,94']
-Asset 1: ['MXRF11', 65, 0, 0, 65, 'R$\xa09,54', 'R$\xa0620,10']
-Asset 2: ['RZAT11', 5, 0, 0, 5, 'R$\xa088,51', 'R$\xa0442,55']
-Asset 3: ['TGAR11', 4, 0, 0, 4, 'R$\xa093,00', 'R$\xa0372,00']
-Asset 4: ['CYCR11', 27, 0, 0, 27, 'R$\xa08,85', 'R$\xa0238,95']
-Asset 5: ['GGRC11', 23, 0, 0, 23, 'R$\xa09,90', 'R$\xa0227,70']
-Asset 6: ['BRCR11', 4, 0, 0, 4, 'R$\xa045,95', 'R$\xa0183,80']
-Asset 7: ['HGBS11', 8, 0, 0, 8, 'R$\xa020,00', 'R$\xa0160,00']
-Asset 8: ['RZTR11', 1, 0, 0, 1, 'R$\xa097,99', 'R$\xa097,99']
-Asset 9: ['VGHF11', 8, 0, 0, 8, 'R$\xa07,23', 'R$\xa057,84']
-Asset 10: ['MCRE11', 5, 0, 0, 5, 'R$\xa09,20', 'R$\xa046,00']
-Asset 11: ['BLMG11', 1, 0, 0, 1, 'R$\xa034,70', 'R$\xa034,70']
-Asset 12: ['SNAG11', 3, 0, 0, 3, 'R$\xa011,14', 'R$\xa033,42']
-Asset 13: ['HCTR11', 1, 0, 0, 1, 'R$\xa021,00', 'R$\xa021,00']
-Asset 14: ['GARE11', 2, 0, 0, 2, 'R$\xa09,06', 'R$\xa018,12']
-Asset 15: ['XPCA11', 2, 0, 0, 2, 'R$\xa08,45', 'R$\xa016,90']
-
-
-```
-
-```python
-def parse_excel_flexible(filepath):
-    # Try reading the first sheet
-    df = pd.read_excel(filepath, header=None)
-    
-    # Check if it looks like a vertical stack (e.g. single main column with data repeating every 7 rows)
-    if df.shape[1] >= 1 and len(df) >= 7 and len(df) % 7 == 0:
-        # Let's see if row 1, 2, 3 are numbers and row 5 starts with R$ or is numeric
-        val_0 = str(df.iloc[0, 0])
-        val_1 = df.iloc[1, 0]
-        if not pd.isna(val_1) and (isinstance(val_1, (int, float)) or str(val_1).isdigit()):
-            print("Detected VERTICAL STACK layout!")
-            ativos = []
-            for i in range(0, len(df), 7):
-                tk = str(df.iloc[i, 0]).upper().strip()
-                try:
-                    qtd = int(df.iloc[i+4, 0]) # Row 4 is Qtd total
-                except:
-                    qtd = 0
-                
-                # Parse price from row 5
-                p_val = str(df.iloc[i+5, 0]).replace("R$", "").replace("\xa0", "").strip()
-                p_val = p_val.replace(".", "").replace(",", ".")
-                try:
-                    preco = float(p_val)
-                except:
-                    preco = 0.0
-                    
-                ativos.append({"Ticker": tk, "Quantidade": qtd, "Preço Pago": preco})
-            return ativos
-
-    # Otherwise try horizontal tabular parsing
-    print("Trying HORIZONTAL TABULAR layout...")
-    df_tab = pd.read_excel(filepath)
-    df_tab.columns = [str(c).strip() for c in df_tab.columns]
-    # Check sheet 3 or find column named Ativo
-    # ...
-    return []
-
-parsed_assets = parse_excel_flexible(filepath)
-print("\nParsed Assets:")
-for a in parsed_assets[:5]:
-    print(a)
-
-
-```
-
-```text
-Detected VERTICAL STACK layout!
-
-Parsed Assets:
-{'Ticker': 'VGIA11', 'Quantidade': 97, 'Preço Pago': 10.02}
-{'Ticker': 'MXRF11', 'Quantidade': 65, 'Preço Pago': 9.54}
-{'Ticker': 'RZAT11', 'Quantidade': 5, 'Preço Pago': 88.51}
-{'Ticker': 'TGAR11', 'Quantidade': 4, 'Preço Pago': 93.0}
-{'Ticker': 'CYCR11', 'Quantidade': 27, 'Preço Pago': 8.85}
-
-
-```
-
-Descobri o mistério por trás desse erro estrutural! Olhando diretamente as entranhas do seu arquivo `ativo-fiis.xlsx`, percebi o que aconteceu:
-
-Ao copiar os dados da corretora ou do portal de análise e colar no Excel, as informações não foram organizadas em colunas horizontais comuns. Elas foram coladas **todas empilhadas na vertical (dentro da Coluna A)**, onde cada ativo ocupa um bloco exato de 7 linhas seguidas (Linha 1: Código, Linha 2: Qtd Disponível, ..., Linha 5: Qtd Total, Linha 6: Cotação).
-
-Como o código antigo esperava encontrar uma tabela horizontal com colunas chamadas "Ativo" e "Qtd. total", ele barrou a leitura.
-
-Para corrigir isso de forma brilhante, **reprogramei o importador para ser inteligente e flexível**. Agora, ele analisa o seu arquivo e detecta automaticamente: se o arquivo vier colado na vertical (como o seu atual), ele faz o fatiamento cirúrgico de 7 em 7 linhas capturando as quantidades reais (`97`, `65`, etc.) e os preços corretos; se no futuro você colocar uma tabela horizontal convencional, ele também lê sem problemas.
-
-Aqui está o seu código **100% completo, blindado e corrigido** para atualizar o arquivo `meu_app.py` de uma vez só:
-
-```python
 import streamlit as st
 import pandas as pd
-import yfinance as yf
-import plotly.express as px
-import streamlit.components.v1 as components
-import os
-import json
+import requests
+import itertools
+import math
+from collections import Counter
 from datetime import datetime
-from streamlit_searchbox import st_searchbox
-from streamlit_autorefresh import st_autorefresh
 
-# Configuração para usar o ecrã inteiro
-st.set_page_config(page_title="Meu Portfólio", page_icon="📈", layout="wide")
+# ============================================================
+# CONFIGURAÇÃO DA PÁGINA
+# ============================================================
 
-# ATUALIZADOR AUTOMÁTICO: Força o ecrã a atualizar a cada 60 segundos
-st_autorefresh(interval=60000, key="datarefresh")
+st.set_page_config(
+    page_title="Lotofácil | Análises e Desdobramentos",
+    page_icon="🍀",
+    layout="wide"
+)
 
-# RESET COMPLETO DE CSS: Corrige o corte do letreiro e elimina o vão preto do topo
-st.markdown("""
-    <style>
-        /* Esconde o cabeçalho nativo do Streamlit */
-        [data-testid="stHeader"] {
-            display: none !important;
-            height: 0px !important;
-            opacity: 0 !important;
-        }
-        
-        /* Define um recuo pequeno e perfeito (10px) para o letreiro não ser cortado no teto */
-        .main .block-container, 
-        [data-testid="stAppViewBlockContainer"],
-        [data-testid="stMainBlockContainer"],
-        [data-testid="stVerticalBlockRoot"] {
-            padding-top: 10px !important;
-            margin-top: 0px !important;
-        }
+# ============================================================
+# ESTADO DA SESSÃO (SESSION STATE)
+# ============================================================
+if "jogos_gerados" not in st.session_state:
+    st.session_state["jogos_gerados"] = []
 
-        /* Remove margens extras do primeiro bloco de elementos */
-        [data-testid="stVerticalBlock"] > div:first-child {
-            margin-top: 0px !important;
-            padding-top: 0px !important;
-        }
-        
-        iframe {
-            margin-top: 0px !important;
-        }
+# ============================================================
+# CSS
+# ============================================================
 
-        /* Afasta o bloco principal do letreiro para eliminar o efeito encavalado */
-        div[data-testid="stHorizontalBlock"] {
-            margin-top: 20px !important;
-        }
+st.markdown(
+    """
+<style>
+    html, body, [class*="css"] {
+        background-color: #0b111a;
+        color: #ffffff;
+    }
 
-        /* Customização para fazer o st.radio horizontal parecer abas elegantes */
-        div[data-testid="stRadio"] > label {
-            display: none !important;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] {
-            flex-direction: row !important;
-            gap: 15px !important;
-            border-bottom: 1px solid #2B3040;
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] label {
-            background: transparent !important;
-            border: none !important;
-            padding: 4px 0px !important;
-            color: #a0aec0 !important;
-            font-weight: bold !important;
-            font-size: 13px !important;
-            cursor: pointer;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
-            color: #ff4b4b !important;
-            border-bottom: 2px solid #ff4b4b !important;
-            border-radius: 0px !important;
-        }
+    .main {
+        background-color: #0b111a;
+    }
 
-        /* Estilo dos Mini-Cards Super Compactos do Topo */
-        .mini-card {
-            background-color: #161A25;
-            border: 1px solid #2B3040;
-            border-radius: 6px;
-            padding: 4px 6px;
-            text-align: center;
-            margin-bottom: 6px;
-            font-family: Arial, sans-serif;
-        }
-        .mini-card-watch {
-            border: 1.5px solid #378ADD !important;
-        }
-        .card-ticker {
-            color: #a0aec0;
-            font-size: 10px;
-            font-weight: bold;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .card-preco {
-            color: #ffffff;
-            font-size: 13px;
-            font-weight: bold;
-            margin: 1px 0;
-        }
-        .card-var {
-            font-size: 9px;
-            font-weight: 500;
-        }
-        .var-positiva { color: #00e676; }
-        .var-negativa { color: #ff4b4b; }
-    </style>
-""", unsafe_allow_html=True)
+    h1, h2, h3 {
+        color: #ffffff;
+        font-weight: 900;
+    }
 
-# ==========================================
-# --- 0. LISTA DE TICKERS (B3) PARA BUSCA INTELIGENTE ---
-# ==========================================
-TICKERS_B3 = {
-    "PETR3": "Petrobras ON", "PETR4": "Petrobras PN",
-    "VALE3": "Vale ON",
-    "ITUB3": "Itaú Unibanco ON", "ITUB4": "Itaú Unibanco PN",
-    "BBDC3": "Bradesco ON", "BBDC4": "Bradesco PN",
-    "BBAS3": "Banco do Brasil ON",
-    "SANB11": "Santander Unit",
-    "ABEV3": "Ambev ON",
-    "WEGE3": "WEG ON",
-    "RENT3": "Localiza ON",
-    "SUZB3": "Suzano ON",
-    "JBSS3": "JBS ON",
-    "GGBR4": "Gerdau PN",
-    "CSNA3": "CSN ON",
-    "CMIG3": "Cemig ON", "CMIG4": "Cemig PN",
-    "CPLE3": "Copel ON", "CPLE6": "Copel PNB",
-    "ELET3": "Eletrobras ON", "ELET6": "Eletrobras PNB",
-    "EQTL3": "Equatorial ON",
-    "ENGI11": "Energisa Unit",
-    "TAEE11": "Taesa Unit",
-    "CPFE3": "CPFL Energia ON",
-    "RADL3": "Raia Drogasil ON",
-    "LREN3": "Lojas Renner ON",
-    "MGLU3": "Magazine Luiza ON",
-    "AMER3": "Americanas ON",
-    "VIVT3": "Vivo ON",
-    "TIMS3": "TIM ON",
-    "B3SA3": "B3 ON",
-    "BPAC11": "BTG Pactual Unit",
-    "HAPV3": "Hapvida ON",
-    "RDOR3": "Rede D'Or ON",
-    "GNDI3": "Intermédica ON",
-    "CCRO3": "CCR ON",
-    "RAIL3": "Rumo ON",
-    "EMBR3": "Embraer ON",
-    "AZUL4": "Azul PN",
-    "GOLL4": "Gol PN",
-    "COGN3": "Cogna ON",
-    "YDUQ3": "Yduqs ON",
-    "MRFG3": "Marfrig ON",
-    "BEEF3": "Minerva ON",
-    "BRFS3": "BRF ON",
-    "NTCO3": "Natura ON",
-    "ASAI3": "Assaí ON",
-    "PCAR3": "GPA ON",
-    "CRFB3": "Carrefour Brasil ON",
-    "CYRE3": "Cyrela ON",
-    "MRVE3": "MRV ON",
-    "EZTC3": "Eztec ON",
-    "USIM5": "Usiminas PNA",
-    "CSAN3": "Cosan ON",
-    "UGPA3": "Ultrapar ON",
-    "PRIO3": "PetroRio ON",
-    "RRRP3": "3R Petroleum ON",
-    "VBBR3": "Vibra Energia ON",
-    "SLCE3": "SLC Agrícola ON",
-    "SMTO3": "São Martinho ON",
-    "KLBN11": "Klabin Unit",
-    "DXCO3": "Dexco ON",
-    "TOTS3": "Totvs ON",
-    "LWSA3": "Locaweb ON",
-    "POSI3": "Positivo ON",
-    "IRBR3": "IRB Brasil ON",
-    "BBSE3": "BB Seguridade ON",
-    "PSSA3": "Porto Seguro ON",
-    "SBSP3": "Sabesp ON",
-    "GARE11": "GARE Recebíveis Imobiliários FII",
-    "VGIA11": "Valora RE III FII",
-    "MXRF11": "Maxi Renda FII",
-    "HGLG11": "CSHG Logística FII",
-    "KNRI11": "Kinea Renda Imobiliária FII",
-    "XPML11": "XP Malls FII",
-    "VISC11": "Vinci Shopping Centers FII",
-    "BCFF11": "BTG Pactual Fundo de Fundos FII",
-    "HGRE11": "CSHG Real Estate FII",
-    "IRDM11": "Iridium Recebíveis FII",
-    "KNCR11": "Kinea Rendimentos Imobiliários FII",
-    "RECR11": "REC Recebíveis Imobiliários FII",
-    "VILG11": "Vinci Logística FII",
-    "BTLG11": "BTG Pactual Logística FII",
-    "HFOF11": "Hedge Top FOFII 3 FII",
-    "RBRF11": "RBR Alpha FII",
-    "PVBI11": "VBI Prime Properties FII",
-    "HSAF11": "HSI Ativos Financeiros FII",
-}
+    .subtitulo {
+        font-size: 22px;
+        color: #ffffff;
+        font-weight: 800;
+        margin-bottom: 24px;
+    }
 
-def search_tickers(searchterm):
-    if not searchterm:
-        return []
-    termo = searchterm.strip().upper()
-    resultados = []
-    if len(termo) >= 4:
-        resultados.append((f"➕ Usar ativo digitado: {termo}", termo))
-    for tk, nome in TICKERS_B3.items():
-        if termo in tk or termo in nome.upper():
-            if tk != termo:
-                resultados.append((f"{tk} — {nome}", tk))
-    resultados.sort(key=lambda x: (not x[1].startswith(termo), x[1]))
-    return resultados[:15]
+    .ultimo-sorteio {
+        border: 2px solid #1e88ff;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 12px 0 26px 0;
+        background: linear-gradient(90deg, #111827, #162033);
+        box-shadow: 0 0 14px rgba(30,136,255,0.28);
+    }
 
-# ==========================================
-# --- 1. BANCO DE DADOS (CSV) ---
-# ==========================================
-ARQUIVO_BANCO = "minha_carteira.csv"
+    .ultimo-label {
+        font-size: 14px;
+        color: #93c5fd;
+        font-weight: 800;
+        margin-bottom: 12px;
+    }
 
-def carregar_dados():
-    if os.path.exists(ARQUIVO_BANCO):
-        df = pd.read_csv(ARQUIVO_BANCO)
-        if "Preço Médio" in df.columns:
-            df = df.rename(columns={"Preço Médio": "Preço Pago"})
-        if "Data da Compra" not in df.columns:
-            df["Data da Compra"] = "Antes da Atualização"
-        if "Carteira" not in df.columns:
-            df["Carteira"] = "COMPRAS (Real)"
-        return df.to_dict(orient="records")
-    return []
+    .ultimo-concurso {
+        font-size: 22px;
+        color: #ffffff;
+        font-weight: 900;
+        margin-bottom: 16px;
+    }
 
-def salvar_dados(dados):
-    df = pd.DataFrame(dados)
-    df.to_csv(ARQUIVO_BANCO, index=False)
-    return df.to_dict(orient="records")
+    .ultimo-local {
+        color: #ffffff;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
 
-if "carteira" not in st.session_state:
-    st.session_state["carteira"] = carregar_dados()
+    .ultimo-local strong {
+        color: #ffffff;
+    }
 
-# ==========================================
-# --- 2. FUNÇÕES DE DADOS (YFINANCE) ---
-# ==========================================
-@st.cache_data(ttl=60)
-def buscar_cotacao_simples(ticker):
-    ticker_sa = ticker if ticker.endswith(('.SA', '-BRL', '=X', '^')) else f"{ticker}.SA"
-    try:
-        hist = yf.Ticker(ticker_sa).history(period="1d")
-        if len(hist) > 0:
-            return float(hist['Close'].iloc[-1])
-    except Exception:
-        pass
-    return None
+    .dezenas-resultado-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-top: 8px;
+    }
 
-@st.cache_data(ttl=60)
-def buscar_cotacoes_lote(tickers):
-    if not tickers:
-        return {}
-    tickers_sa = [t if t.endswith(('.SA', '-BRL', '=X', '^')) else f"{t}.SA" for t in tickers]
-    precos = {}
-    try:
-        dados = yf.download(tickers=tickers_sa, period="2d", progress=False)
-        for t, t_sa in zip(tickers, tickers_sa):
-            try:
-                if isinstance(dados.columns, pd.MultiIndex):
-                    df_ticker = dados.xs(t_sa, level=1, axis=1) if t_sa in dados.columns.get_level_values(1) else dados[t_sa]
-                else:
-                    df_ticker = dados
-                df_ticker = df_ticker.dropna(subset=["Close"])
-                if len(df_ticker) >= 2:
-                    atual = float(df_ticker["Close"].iloc[-1])
-                    anterior = float(df_ticker["Close"].iloc[-2])
-                    var = atual - anterior
-                    pct = (var / anterior) * 100
-                elif len(df_ticker) == 1:
-                    atual = float(df_ticker["Close"].iloc[-1])
-                    var, pct = 0.0, 0.0
-                else:
-                    atual = buscar_cotacao_simples(t) or 0.0
-                    var, pct = 0.0, 0.0
-                precos[t] = {"preco": atual, "var": var, "pct": pct}
-            except Exception:
-                p = buscar_cotacao_simples(t)
-                precos[t] = {"preco": p if p else 0.0, "var": 0.0, "pct": 0.0}
-        return precos
-    except Exception:
-        return {t: {"preco": buscar_cotacao_simples(t) or 0.0, "var": 0.0, "pct": 0.0} for t in tickers}
+    .dezena-resultado {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #5cff75, #16a34a 65%, #0f7a35);
+        color: #ffffff;
+        font-weight: 900;
+        font-size: 13px;
+        border: 2px solid rgba(255,255,255,0.18);
+        box-shadow:
+            0 0 10px rgba(34,197,94,0.45),
+            inset 0 2px 5px rgba(255,255,255,0.25),
+            inset 0 -4px 8px rgba(0,0,0,0.22);
+    }
 
-@st.cache_data(ttl=300)
-def buscar_indices_topo():
-    try:
-        ibov = yf.Ticker("^BVSP").history(period="2d")
-        dolar = yf.Ticker("BRL=X").history(period="2d")
-        btc = yf.Ticker("BTC-BRL").history(period="2d")
-        dow = yf.Ticker("^DJI").history(period="2d")
-        nasdaq = yf.Ticker("^NDX").history(period="2d")
-        dados = {}
-        for nome, hist in [("IBOV", ibov), ("USD", dolar), ("BTC", btc), ("DOW", dow), ("NASDAQ", nasdaq)]:
-            if len(hist) >= 2:
-                atual = hist['Close'].iloc[-1]
-                ant = hist['Close'].iloc[-2]
-                var = atual - ant
-                pct = (var / ant) * 100
-                dados[nome] = {"preco": atual, "var": var, "pct": pct}
-        return dados
-    except Exception:
-        pass
-    return None
+    .info-box {
+        background: #1c2d45;
+        border-left: 4px solid #1e88ff;
+        color: #ffffff;
+        padding: 16px 18px;
+        border-radius: 8px;
+        margin: 20px 0 14px 0;
+        font-size: 14px;
+        font-weight: 700;
+    }
 
-@st.cache_data(ttl=300)
-def buscar_destaques_mercado():
-    tickers = ['PETR4.SA', 'VALE3.SA', 'ITUB4.SA', 'BBDC4.SA', 'B3SA3.SA', 'ABEV3.SA',
-               'WEGE3.SA', 'RENT3.SA', 'SUZB3.SA', 'ELET3.SA', 'RADL3.SA', 'PRIO3.SA',
-               'HAPV3.SA', 'MGLU3.SA', 'COGN3.SA', 'USIM5.SA', 'CSNA3.SA', 'GGBR4.SA',
-               'JBSS3.SA', 'BBAS3.SA', 'RAIZ4.SA', 'AZZA3.SA', 'EGIE3.SA', 'BEEF3.SA',
-               'BRAV3.SA', 'CSMG3.SA']
-    resultados = []
-    erro_geral = False
-    try:
-        df = yf.download(tickers, period="5d", progress=False)
-        if isinstance(df.columns, pd.MultiIndex):
-            if 'Close' in df.columns.get_level_values(0):
-                df_close = df['Close']
-            else:
-                df_close = df.xs('Close', level=1, axis=1)
-        else:
-            df_close = df['Close'] if 'Close' in df else df
-        df_close = df_close.dropna(axis=1, how='all')
-        for ticker in tickers:
-            if ticker in df_close.columns:
-                s = df_close[ticker].dropna()
-                if len(s) >= 2:
-                    p_ant, p_atu = float(s.iloc[-2]), float(s.iloc[-1])
-                    if p_ant > 0:
-                        var_pct = ((p_atu - p_ant) / p_ant) * 100
-                        resultados.append({"Ativo": ticker.replace(".SA", ""), "Preço": p_atu, "Var%": var_pct})
-    except Exception:
-        erro_geral = True
-    res_sort = sorted(resultados, key=lambda x: x["Var%"], reverse=True)
-    n = len(res_sort)
-    corte = min(5, n // 2) if n < 10 else 5
-    altas = res_sort[:corte]
-    baixas = sorted(res_sort[n - corte:], key=lambda x: x["Var%"]) if corte > 0 else []
-    return altas, baixas, erro_geral
+    .metric-card {
+        background: #111821;
+        border: 1px solid #2d3b4f;
+        border-radius: 10px;
+        padding: 22px 16px;
+        text-align: center;
+        min-height: 95px;
+    }
 
-@st.cache_data(ttl=3600)
-def buscar_historico(ticker):
-    try:
-        ticker_sa = ticker if ticker.endswith('.SA') else f"{ticker}.SA"
-        hist = yf.Ticker(ticker_sa).history(period="6mo")
-        hist.reset_index(inplace=True)
-        if hist['Date'].dt.tz is not None:
-            hist['Date'] = hist['Date'].dt.tz_localize(None)
-        return hist[['Date', 'Close']].rename(columns={'Date': 'Data', 'Close': 'Preço'})
-    except Exception:
-        pass
-    return pd.DataFrame()
+    .metric-label {
+        font-size: 13px;
+        color: #9bd1ff;
+        margin-bottom: 12px;
+    }
 
-@st.cache_data(ttl=7200)
-def buscar_proventos_ativos(tickers):
-    proventos_lista = []
-    for t in tickers:
-        try:
-            ticker_sa = t if t.endswith('.SA') else f"{t}.SA"
-            divs = yf.Ticker(ticker_sa).dividends
-            if not divs.empty:
-                df_divs = divs.to_frame().reset_index()
-                df_divs['Date'] = df_divs['Date'].dt.tz_localize(None)
-                df_divs = df_divs[df_divs['Date'] >= '2024-01-01']
-                for _, row in df_divs.iterrows():
-                    proventos_lista.append({
-                        "Ativo": t,
-                        "Data com": row['Date'].strftime('%d/%m/%Y'),
-                        "Valor": float(row['Dividends']),
-                        "Timestamp": row['Date']
-                    })
-        except Exception:
-            pass
-    if proventos_lista:
-        df_res = pd.DataFrame(proventos_lista)
-        return df_res.sort_values(by="Timestamp", ascending=False).drop(columns=["Timestamp"])
-    return pd.DataFrame()
+    .metric-value {
+        color: #2f83ff;
+        font-size: 24px;
+        font-weight: 900;
+    }
 
-# ==========================================
-# --- 3. BARRA LATERAL (NAVEGAÇÃO GLOBAL) ---
-# ==========================================
-carteiras_existentes = list(set([str(a.get("Carteira", "COMPRAS (Real)")) for a in st.session_state["carteira"]]))
-if "COMPRAS (Real)" not in carteiras_existentes: carteiras_existentes.insert(0, "COMPRAS (Real)")
-if "WATCHLIST" not in carteiras_existentes: carteiras_existentes.append("WATCHLIST")
+    .section-divider {
+        border-top: 1px solid #2d3b4f;
+        margin: 30px 0;
+    }
 
-with st.sidebar:
-    st.header("🗺️ Menu Principal")
-    tela_ativa = st.radio("Navegar para:", ["📊 Meu Portfólio", "📅 Monitor de Proventos", "🏆 Maiores Receitas"], index=0)
-    st.divider()
+    .dezena-base {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #1e88ff;
+        color: white;
+        font-weight: 900;
+        margin: 4px;
+        box-shadow: 0 0 8px rgba(30,136,255,0.45);
+    }
 
-    st.header("🛒 Adicionar Ativo")
-    ticker_selecionado = st.text_input("Digite o código ou nome (ex: CEMIG, PETR4)", key="busca_ticker_manual")
-    ticker_input = (ticker_selecionado or "").upper().strip()
+    /* Estilo para destacar as dezenas fixas na base */
+    .dezena-fixa-painel {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        font-weight: 900;
+        margin: 4px;
+        border: 2px solid #818cf8;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
+    }
 
-    preco_atual_sidebar = None
-    if ticker_input:
-        with st.spinner("A buscar..."):
-            preco_atual_sidebar = buscar_cotacao_simples(ticker_input)
-        if preco_atual_sidebar:
-            st.metric(label=f"Cotação Atual ({ticker_input})", value=f"R$ {preco_atual_sidebar:.2f}")
-        else:
-            st.warning("Não consegui buscar a cotação agora.")
+    .dezena-fria {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #ef4444;
+        color: white;
+        font-weight: 900;
+        margin: 4px;
+        box-shadow: 0 0 8px rgba(239,68,68,0.45);
+    }
 
-    carteira_selecionada = st.selectbox("Carteira Destino", carteiras_existentes)
-    tipo_adicao = st.radio("Tipo de Registro:", ["💰 Compra Real", "👁️ Só Acompanhar Cotação"], horizontal=True)
+    .jogo-box {
+        background: #111821;
+        border: 1px solid #2d3b4f;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 10px;
+    }
 
-    if tipo_adicao == "👁️ Só Acompanhar Cotação":
-        qtd_input = 0
-        preco_medio_input = 0.0
-        data_compra_input = st.date_input("Data de Adição", value=datetime.today())
+    .jogo-titulo {
+        color: #93c5fd;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .dezena-jogo {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #16a34a;
+        color: white;
+        font-weight: 800;
+        margin: 3px;
+        font-size: 12px;
+    }
+
+    .dezena-acerto {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #facc15, #ca8a04 65%, #854d0e);
+        color: white;
+        font-weight: 800;
+        margin: 3px;
+        font-size: 12px;
+        box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+    }
+
+    .premio-card {
+        background: #16222f;
+        border: 1px solid #ca8a04;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+    }
+    .premio-titulo {
+        font-size: 12px;
+        color: #fef08a;
+    }
+    .premio-valor {
+        font-size: 20px;
+        font-weight: 900;
+        color: #facc15;
+    }
+
+    .stDownloadButton button {
+        background-color: #16a34a !important;
+        color: white !important;
+        border-radius: 8px;
+        font-weight: 800;
+    }
+</style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ============================================================
+# FUNÇÕES DE BUSCA NA CAIXA
+# ============================================================
+
+BASE_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil"
+
+
+@st.cache_data(ttl=600)
+def buscar_concurso(numero=None):
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json,text/plain,*/*"
+    }
+
+    if numero is None:
+        url = BASE_URL
     else:
-        qtd_input = st.number_input("Quantidade", min_value=1, value=10)
-        valor_padrao_preco = float(preco_atual_sidebar) if preco_atual_sidebar else 35.00
-        preco_medio_input = st.number_input("Preço da Compra (R$)", min_value=0.01, value=valor_padrao_preco, step=0.01)
-        data_compra_input = st.date_input("Data da Compra", value=datetime.today())
-        total_simulado = qtd_input * preco_medio_input
-        st.info(f"**Total da Ordem: R$ {total_simulado:,.2f}**")
+        url = f"{BASE_URL}/{numero}"
 
-    col_btn1, col_btn2 = st.columns(2)
-    if col_btn1.button("Adicionar Ativo"):
-        data_str = data_compra_input.strftime("%d/%m/%Y")
-        st.session_state["carteira"].append({
-            "Ticker": ticker_input, "Quantidade": qtd_input,
-            "Preço Pago": preco_medio_input, "Data da Compra": data_str,
-            "Carteira": carteira_selecionada
-        })
-        st.session_state["carteira"] = salvar_dados(st.session_state["carteira"])
-        st.success("Salvo!")
-        st.rerun()
+    response = requests.get(url, headers=headers, timeout=20)
+    response.raise_for_status()
+    dados = response.json()
 
-    if col_btn2.button("Limpar Tudo"):
-        st.session_state["carteira"] = []
-        if os.path.exists(ARQUIVO_BANCO): os.remove(ARQUIVO_BANCO)
-        st.rerun()
+    dezenas = dados.get("listaDezenas", [])
+    dezenas = [str(d).zfill(2) for d in dezenas]
 
-    # 🚀 IMPORTADOR AUTOMÁTICO FLEXÍVEL (Suporta o formato vertical de cópia e horizontal tradicional)
-    st.divider()
-    st.header("📥 Importar Excel (.xlsx)")
-    arquivo_excel = st.file_uploader("Carregar planilha de ativos:", type=["xlsx"])
-    carteira_import_destino = st.selectbox("Salvar ativos na Pasta:", carteiras_existentes, key="sb_import_destino")
-    
-    if st.button("Executar Importação", use_container_width=True):
-        if arquivo_excel is not None:
-            try:
-                importado_com_sucesso = False
-                data_hoje = datetime.today().strftime("%d/%m/%Y")
-                ativos_importados = []
+    return {
+        "numero": dados.get("numero"),
+        "data": dados.get("dataApuracao"),
+        "dezenas": dezenas,
+        "municipio": dados.get("nomeMunicipioUFSorteio") or dados.get("nomeMunicipioSorteio"),
+        "local": dados.get("localSorteio"),
+        "raw": dados
+    }
 
-                # 1. TENTA PROCESSAR COMO FORMATO VERTICAL (Dados empilhados de 7 em 7 linhas na coluna A)
-                df_raw = pd.read_excel(arquivo_excel, header=None)
-                if df_raw.shape[1] >= 1 and len(df_raw) >= 7 and len(df_raw) % 7 == 0:
-                    for i in range(0, len(df_raw), 7):
-                        tk = str(df_raw.iloc[i, 0]).upper().strip()
-                        if pd.isna(df_raw.iloc[i, 0]) or tk == "" or tk == "NAN":
-                            continue
-                        try:
-                            qtd = int(df_raw.iloc[i+4, 0])  # Linha 4 do bloco de 7 é a Qtd total
-                        except:
-                            try:
-                                qtd = int(df_raw.iloc[i+1, 0])  # Backup: Linha 1 (Qtd disponível)
-                            except:
-                                qtd = 0
-                        try:
-                            p_str = str(df_raw.iloc[i+5, 0]).replace("R$", "").replace(" ", "").replace("\xa0", "")
-                            p_str = p_str.replace(".", "").replace(",", ".")
-                            preco_pago = float(p_str)
-                        except:
-                            preco_pago = 0.0
 
-                        ativos_importados.append({
-                            "Ticker": tk, "Quantidade": qtd,
-                            "Preço Pago": preco_pago, "Data da Compra": data_hoje,
-                            "Carteira": carteira_import_destino
-                        })
-                    
-                    if ativos_importados:
-                        st.session_state["carteira"].extend(ativos_importados)
-                        st.session_state["carteira"] = salvar_dados(st.session_state["carteira"])
-                        st.success(f"Sucesso! {len(ativos_importados)} ativos importados da lista vertical para a pasta {carteira_import_destino}!")
-                        importado_com_sucesso = True
-                        st.rerun()
+@st.cache_data(ttl=600)
+def carregar_concursos(qtd):
+    ultimo = buscar_concurso()
+    numero_ultimo = int(ultimo["numero"])
 
-                # 2. CASO FALHE, TENTA PROCESSAR NO FORMATO HORIZONTAL CONVENCIONAL VARRENDO AS ABAS
-                if not importado_com_sucesso:
-                    xls_file = pd.ExcelFile(arquivo_excel)
-                    for sheet_name in xls_file.sheet_names:
-                        df_ex = pd.read_excel(arquivo_excel, sheet_name=sheet_name)
-                        df_ex.columns = [str(c).strip() for c in df_ex.columns]
-                        
-                        col_ativo = "Ativo" if "Ativo" in df_ex.columns else None
-                        col_qtd = "Qtd. total" if "Qtd. total" in df_ex.columns else ("Qtd. disponível" if "Qtd. disponível" in df_ex.columns else None)
-                        
-                        if col_ativo and col_qtd:
-                            for _, row in df_ex.iterrows():
-                                tk = str(row[col_ativo]).upper().strip()
-                                if pd.isna(row[col_ativo]) or tk == "" or tk == "NAN":
-                                    continue
-                                try:
-                                    qtd = int(row[col_qtd])
-                                except:
-                                    qtd = 0
-                                preco_pago = 0.0
-                                if "Última cotação" in df_ex.columns:
-                                    try:
-                                        p_str = str(row["Última cotação"]).replace("R$", "").replace(" ", "").replace("\xa0", "")
-                                        p_str = p_str.replace(".", "").replace(",", ".")
-                                        preco_pago = float(p_str)
-                                    except:
-                                        preco_pago = 0.0
+    concursos = []
 
-                                idx_alt = next((index for (index, d) in enumerate(ativos_importados) if d["Ticker"] == tk), None)
-                                if idx_alt is not None:
-                                    ativos_importados[idx_alt]["Quantidade"] = qtd
-                                    if preco_pago > 0:
-                                        ativos_importados[idx_alt]["Preço Pago"] = preco_pago
-                                else:
-                                    ativos_importados.append({
-                                        "Ticker": tk, "Quantidade": qtd,
-                                        "Preço Pago": preco_pago, "Data da Compra": data_hoje,
-                                        "Carteira": carteira_import_destino
-                                    })
-                            
-                            if ativos_importados:
-                                st.session_state["carteira"].extend(ativos_importados)
-                                st.session_state["carteira"] = salvar_dados(st.session_state["carteira"])
-                                st.success(f"Sucesso! {len(ativos_importados)} ativos importados da tabela horizontal ({sheet_name}) para a pasta {carteira_import_destino}!")
-                                importado_com_sucesso = True
-                                st.rerun()
-                                break
-                                
-                if not importado_com_sucesso:
-                    st.error("Erro estrutural: O arquivo não pôde ser interpretado nem como lista vertical e nem como tabela contendo colunas com títulos 'Ativo' e 'Qtd. total'.")
-            except Exception as e:
-                st.error(f"Erro inesperado ao processar o Excel: {str(e)}")
-        else:
-            st.warning("Por favor, selecione um arquivo válido antes de clicar.")
-
-    st.divider()
-    st.header("📂 Nova Carteira")
-    nova_carteira_input = st.text_input("Nome da Nova Carteira").upper().strip()
-    if st.button("Criar Carteira", use_container_width=True):
-        if nova_carteira_input and nova_carteira_input not in carteiras_existentes:
-            st.session_state["carteira"].append({
-                "Ticker": "CAIXA", "Quantidade": 0, "Preço Pago": 0,
-                "Data da Compra": datetime.today().strftime("%d/%m/%Y"), 
-                "Carteira": nova_carteira_input
-            })
-            st.session_state["carteira"] = salvar_dados(st.session_state["carteira"])
-            st.success(f"Pasta {nova_carteira_input} criada!")
-            st.rerun()
-
-    st.divider()
-    st.header("✏️ Renomear Carteira")
-    carteira_para_renomear = st.selectbox("Selecione a Pasta para Alterar", carteiras_existentes, key="sel_renomear_box")
-    novo_nome_input = st.text_input("Novo Nome da Pasta").upper().strip()
-    if st.button("Salvar Novo Nome", use_container_width=True):
-        if novo_nome_input and carteira_para_renomear and novo_nome_input != carteira_para_renomear:
-            for ativo in st.session_state["carteira"]:
-                if str(ativo.get("Carteira")).upper() == carteira_para_renomear.upper():
-                    ativo["Carteira"] = novo_nome_input
-            st.session_state["carteira"] = salvar_dados(st.session_state["carteira"])
-            st.success("Pasta renomeada com sucesso!")
-            st.rerun()
-
-    st.divider()
-    st.header("❌ Remover Ativo")
-    lista_ativos_remover = [f"{a['Ticker']} ({a['Carteira']})" for a in st.session_state["carteira"] if a["Ticker"] != "CAIXA"]
-    lista_ativos_remover = list(set(lista_ativos_remover))
-    
-    ativo_para_remover = st.selectbox("Selecione o Ativo para Excluir", ["Selecionar Ativo..."] + sorted(lista_ativos_remover), key="sel_remover_box")
-    if st.button("Excluir Permanentemente", use_container_width=True):
-        if ativo_para_remover != "Selecionar Ativo..." and " (" in ativo_para_remover:
-            parts = ativo_para_remover.split(" (", 1)
-            tk_excluir = parts[0].strip()
-            cart_excluir = parts[1][:-1].strip()
-            
-            st.session_state["carteira"] = [
-                a for a in st.session_state["carteira"]
-                if not (str(a.get("Ticker")).upper() == tk_excluir.upper() and str(a.get("Carteira")).upper() == cart_excluir.upper())
-            ]
-            st.session_state["carteira"] = salvar_dados(st.session_state["carteira"])
-            st.success(f"{tk_excluir} removido com sucesso!")
-            st.rerun()
-        else:
-            st.warning("Por favor, selecione um ativo válido antes de clicar.")
-
-    st.divider()
-    st.header("💾 Backup dos Dados")
-    if len(st.session_state["carteira"]) > 0:
-        df_download = pd.DataFrame(st.session_state["carteira"])
-        csv_data = df_download.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Baixar Backup (CSV)",
-            data=csv_data,
-            file_name="meu_portfolio_backup.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    arquivo_upload = st.file_uploader("Restaurar dados caso sumam:", type=["csv"])
-    if arquivo_upload is not None:
+    for numero in range(numero_ultimo, numero_ultimo - qtd, -1):
         try:
-            df_uploaded = pd.read_csv(arquivo_upload)
-            st.session_state["carteira"] = df_uploaded.to_dict(orient="records")
-            salvar_dados(st.session_state["carteira"])
-            st.success("Dados restaurados!")
-            st.rerun()
+            concurso = buscar_concurso(numero)
+            if concurso["dezenas"]:
+                concursos.append(concurso)
         except Exception:
-            st.error("Arquivo de backup inválido.")
+            continue
 
-# ==========================================
-# --- RESOLUÇÃO E ESTRUTURAÇÃO DOS DADOS ---
-# ==========================================
-if "carteira_ativa_radio" not in st.session_state:
-    st.session_state["carteira_ativa_radio"] = carteiras_existentes[0]
+    return concursos
 
-carteira_ativa = st.session_state["carteira_ativa_radio"]
 
-dados_aba = [
-    a for a in st.session_state["carteira"] 
-    if str(a.get("Carteira", "COMPRAS (Real)")).upper() == carteira_ativa.upper() and str(a.get("Ticker")) != "CAIXA"
-]
-ativos_com_quantidade = [a for a in dados_aba if float(a.get("Quantidade", 0)) > 0]
-is_tracking_aba = (carteira_ativa.upper() == "WATCHLIST") or (len(ativos_com_quantidade) == 0)
+# ============================================================
+# FUNÇÕES DE ANÁLISE
+# ============================================================
 
-CARTEIRAS_TRACKING = set()
-for c_name in carteiras_existentes:
-    validos = [a for a in st.session_state["carteira"] if str(a.get("Carteira")).upper() == c_name.upper() and a["Ticker"] != "CAIXA"]
-    com_qtd = [a for a in validos if float(a.get("Quantidade", 0)) > 0]
-    if c_name.upper() == "WATCHLIST" or len(com_qtd) == 0:
-        CARTEIRAS_TRACKING.add(c_name.upper())
+def analisar_concursos(concursos):
+    todas_dezenas = []
 
-def eh_patrimonio_real(ativo):
-    return str(ativo.get("Carteira", "COMPRAS (Real)")).upper() not in CARTEIRAS_TRACKING
+    for concurso in concursos:
+        todas_dezenas.extend(concurso["dezenas"])
 
-tickers_filtrados = list(set([a["Ticker"] for a in dados_aba]))
-precos_lote = buscar_cotacoes_lote(tickers_filtrados)
+    frequencia = Counter(todas_dezenas)
 
-simbolos_letreiro = [
-    {"proName": "BMFBOVESPA:IBOV", "title": "Ibovespa"},
-    {"proName": "FX_IDC:USDBRL", "title": "Dólar"},
-    {"proName": "BINANCE:BTCBRL", "title": "Bitcoin"}
-]
-if len(st.session_state["carteira"]) > 0:
-    ativos_unicos = list(set([str(a["Ticker"]).upper().strip() for a in st.session_state["carteira"] if pd.notna(a.get("Ticker")) and str(a["Ticker"]).upper() != "CAIXA" and str(a["Ticker"]).strip() != ""]))
-    for ativo in ativos_unicos[:10]:
-        simbolos_letreiro.append({"proName": f"BMFBOVESPA:{ativo}", "title": ativo})
+    universo = [str(i).zfill(2) for i in range(1, 26)]
 
-codigo_letreiro = f"""
-<body style="margin: 0; padding: 0; background-color: #0e1117; overflow: hidden;">
-<div class="tradingview-widget-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-  {{"symbols": {json.dumps(simbolos_letreiro)}, "showSymbolLogo": true, "isTransparent": true, "displayMode": "adaptive", "colorTheme": "dark", "locale": "br"}}
-  </script>
-</div>
-</body>
-"""
-components.html(codigo_letreiro, height=45)
+    df_freq = pd.DataFrame({
+        "dezena": universo,
+        "frequencia": [frequencia.get(dezena, 0) for dezena in universo]
+    })
 
-def criar_cartao_html(titulo, valor, variacao, pct, prefixo="", watchlist=False):
-    cor = "#00e676" if variacao >= 0 else "#ff4b4b"
-    sinal = "+" if variacao >= 0 else ""
-    borda = "1.5px solid #378ADD" if watchlist else "1px solid #2B3040"
-    nome_exibicao = f"👁️ {titulo}" if watchlist else titulo
-    return (
-        f'<div class="mini-card {"mini-card-watch" if watchlist else ""}">'
-        f'<div class="card-ticker">{nome_exibicao}</div>'
-        f'<div class="card-preco">{prefixo}{valor}</div>'
-        f'<div class="card-var {"var-positiva" if variacao >= 0 else "var-negativa"}">{sinal}{pct:.2f}%</div>'
-        f'</div>'
+    df_freq = df_freq.sort_values(
+        by=["frequencia", "dezena"],
+        ascending=[False, True]
+    ).reset_index(drop=True)
+
+    return df_freq
+
+
+def calcular_atrasos(concursos):
+    universo = [str(i).zfill(2) for i in range(1, 26)]
+    atrasos = {}
+
+    for dezena in universo:
+        atraso = 0
+
+        for concurso in concursos:
+            if dezena in concurso["dezenas"]:
+                break
+            atraso += 1
+
+        atrasos[dezena] = atraso
+
+    df_atrasos = pd.DataFrame({
+        "dezena": list(atrasos.keys()),
+        "atraso": list(atrasos.values())
+    })
+
+    df_atrasos = df_atrasos.sort_values(
+        by=["atraso", "dezena"],
+        ascending=[False, True]
+    ).reset_index(drop=True)
+
+    return df_atrasos
+
+
+def staticas_jogo(jogo, ultimo_resultado):
+    numeros = [int(x) for x in jogo]
+
+    pares = sum(1 for n in numeros if n % 2 == 0)
+    impares = 15 - pares
+    soma = sum(numeros)
+    repetidas_ultimo = len(set(jogo).intersection(set(ultimo_resultado)))
+
+    return {
+        "pares": pares,
+        "impares": impares,
+        "soma": soma,
+        "repetidas_ultimo": repetidas_ultimo
+    }
+
+
+def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
+    score_freq = sum(mapa_freq.get(d, 0) for d in jogo)
+    score_atraso = sum(mapa_atraso.get(d, 0) for d in jogo)
+
+    return score_freq + score_atraso * 0.25
+
+
+# 🚀 ATUALIZADO: Motor de combinação adaptado para injetar dezenas fixas de forma limpa e performática
+def gerar_desdobramento_com_fixos(
+    base_variavel,
+    fixos,
+    qtd_jogos,
+    ultimo_resultado,
+    mapa_freq,
+    mapa_atraso,
+    pares_min,
+    pares_max,
+    soma_min,
+    soma_max,
+    repetidas_min,
+    repetidas_max,
+    sobreposicao_max
+):
+    vagas_restantes = 15 - len(fixos)
+    combinacoes_variaveis = list(itertools.combinations(base_variavel, vagas_restantes))
+
+    jogos_validos = []
+
+    for combo in combinacoes_variaveis:
+        jogo = sorted(list(fixos) + list(combo), key=lambda x: int(x))
+        stats = staticas_jogo(jogo, ultimo_resultado)
+
+        if not (pares_min <= stats["pares"] <= pares_max):
+            continue
+
+        if not (soma_min <= stats["soma"] <= soma_max):
+            continue
+
+        if not (repetidas_min <= stats["repetidas_ultimo"] <= repetidas_max):
+            continue
+
+        pontos = pontuar_jogo(jogo, mapa_freq, mapa_atraso)
+
+        jogos_validos.append({
+            "jogo": jogo,
+            "score": pontos,
+            "pares": stats["pares"],
+            "impares": stats["impares"],
+            "soma": stats["soma"],
+            "repetidas_ultimo": stats["repetidas_ultimo"]
+        })
+
+    jogos_validos = sorted(jogos_validos, key=lambda x: x["score"], reverse=True)
+
+    selecionados = []
+
+    for item in jogos_validos:
+        jogo_atual = set(item["jogo"])
+
+        if not selecionados:
+            selecionados.append(item)
+        else:
+            aprovado = True
+
+            for selecionado in selecionados:
+                intersecao = len(jogo_atual.intersection(set(selecionado["jogo"])))
+
+                if intersecao > sobreposicao_max:
+                    aprovado = False
+                    break
+
+            if aprovado:
+                selecionados.append(item)
+
+        if len(selecionados) >= qtd_jogos:
+            break
+
+    if len(selecionados) < qtd_jogos:
+        for item in jogos_validos:
+            if item not in selecionados:
+                selecionados.append(item)
+
+            if len(selecionados) >= qtd_jogos:
+                break
+
+    return selecionados[:qtd_jogos]
+
+
+def jogos_para_csv(jogos):
+    linhas = []
+
+    for idx, item in enumerate(jogos, start=1):
+        linha = {
+            "Jogo": idx,
+            "Dezenas": " ".join(item["jogo"]),
+            "Pares": item["pares"],
+            "Ímpares": item["impares"],
+            "Soma": item["soma"],
+            "Repetidas do último": item["repetidas_ultimo"],
+            "Score": round(item["score"], 2)
+        }
+
+        for pos, dezena in enumerate(item["jogo"], start=1):
+            linha[f"D{pos:02d}"] = dezena
+
+        linhas.append(linha)
+
+    return pd.DataFrame(linhas).to_csv(index=False, sep=";", encoding="utf-8-sig")
+
+
+# ============================================================
+# CABEÇALHO
+# ============================================================
+
+st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
+st.markdown(
+    '<div class="subtitulo">Painel estatístico com base nos últimos concursos analisados</div>',
+    unsafe_allow_html=True
+)
+
+# ============================================================
+# ÚLTIMO SORTEIO NO TOPO
+# ============================================================
+
+try:
+    ultimo_concurso = buscar_concurso()
+except Exception as erro:
+    st.error("Não foi possível carregar o último concurso automaticamente da Caixa.")
+    st.stop()
+
+numero_ultimo = ultimo_concurso["numero"]
+data_ultimo = ultimo_concurso["data"]
+dezenas_ultimo = ultimo_concurso["dezenas"]
+
+municipio_sorteio = ultimo_concurso["municipio"]
+local_sorteio = ultimo_concurso["local"]
+
+if municipio_sorteio:
+    texto_local = municipio_sorteio
+elif local_sorteio:
+    texto_local = local_sorteio
+else:
+    texto_local = "Local não informado"
+
+html_dezenas_resultado = "".join(
+    [f'<span class="dezena-resultado">{dezena}</span>' for dezena in dezenas_ultimo]
+)
+
+html_ultimo_sorteio = (
+    f'<div class="ultimo-sorteio">'
+    f'<div class="ultimo-label">🍀 Último sorteio carregado automaticamente da Caixa</div>'
+    f'<div class="ultimo-concurso">Concurso {numero_ultimo} — {data_ultimo}</div>'
+    f'<div class="ultimo-local">Sorteio realizado em: <strong>{texto_local}</strong></div>'
+    f'<div class="dezenas-resultado-container">{html_dezenas_resultado}</div>'
+    f'</div>'
+)
+
+st.markdown(html_ultimo_sorteio, unsafe_allow_html=True)
+
+# ============================================================
+# SIDEBAR
+# ============================================================
+
+st.sidebar.header("⚙️ Configurações")
+
+qtd_concursos = st.sidebar.number_input(
+    "Quantidade de concursos para análise",
+    min_value=5,
+    max_value=100,
+    value=11,
+    step=1
+)
+
+tamanho_base = st.sidebar.number_input(
+    "Tamanho da base sugerida (Total de números jogados)",
+    min_value=15,
+    max_value=25,
+    value=20,
+    step=1
+)
+
+qtd_jogos = st.sidebar.number_input(
+    "Quantidade de jogos no desdobramento",
+    min_value=1,
+    max_value=100,
+    value=12,
+    step=1
+)
+
+st.sidebar.divider()
+
+# 🚀 NOVO SELETOR: Escolha de 1 a 5 números fixos travados em todos os bilhetes
+dezenas_fixas = st.sidebar.multiselect(
+    "Dezenas FIXAS (Presentes em todos os bilhetes - Máx 5)",
+    options=[str(i).zfill(2) for i in range(1, 25 + 1)],
+    default=[],
+    max_selections=5
+)
+
+dezenas_para_descartar = st.sidebar.multiselect(
+    "Dezenas temporariamente descartadas",
+    options=[str(i).zfill(2) for i in range(1, 26) if str(i).zfill(2) not in dezenas_fixas],
+    default=[]
+)
+
+st.sidebar.divider()
+
+st.sidebar.subheader("Filtros combinatórios")
+
+pares_min = st.sidebar.slider("Mínimo de pares", min_value=0, max_value=15, value=6)
+pares_max = st.sidebar.slider("Máximo de pares", min_value=0, max_value=15, value=9)
+
+soma_min = st.sidebar.number_input("Soma mínima", min_value=120, max_value=300, value=170, step=1)
+soma_max = st.sidebar.number_input("Soma máxima", min_value=120, max_value=300, value=220, step=1)
+
+repetidas_min = st.sidebar.slider("Mínimo de repetidas do último concurso", min_value=0, max_value=15, value=8)
+repetidas_max = st.sidebar.slider("Máximo de repetidas do último concurso", min_value=0, max_value=15, value=11)
+
+sobreposicao_max = st.sidebar.slider("Sobreposição máxima entre jogos", min_value=8, max_value=15, value=13)
+
+# ============================================================
+# CARREGAMENTO DOS CONCURSOS
+# ============================================================
+
+with st.spinner("Carregando concursos da Caixa..."):
+    concursos = carregar_concursos(qtd_concursos)
+
+if not concursos:
+    st.error("Nenhum concurso foi carregado.")
+    st.stop()
+
+df_freq = analisar_concursos(concursos)
+df_atrasos = calcular_atrasos(concursos)
+
+mapa_freq = dict(zip(df_freq["dezena"], df_freq["frequencia"]))
+mapa_atraso = dict(zip(df_atrasos["dezena"], df_atrasos["atraso"]))
+
+opcoes_concurso = {}
+for c in concursos:
+    opcoes_concurso[f"Concurso {c['numero']} ({c['data']})"] = c['dezenas']
+opcoes_concurso["Inserir Dezenas Manualmente"] = []
+
+# ============================================================
+# VISÃO GERAL DA ANÁLISE
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 📊 Visão Geral da Análise")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("### 🔥 Dezenas mais fortes")
+
+    dezenas_fortes = df_freq.head(10)
+
+    html_fortes = ""
+
+    for _, row in dezenas_fortes.iterrows():
+        html_fortes += f'<span class="dezena-base">{row["dezena"]}</span>'
+
+    st.markdown(html_fortes, unsafe_allow_html=True)
+
+    st.dataframe(
+        dezenas_fortes.rename(
+            columns={
+                "dezena": "Dezena",
+                "frequencia": "Frequência"
+            }
+        ),
+        use_container_width=True,
+        hide_index=True
     )
 
-indices = buscar_indices_topo()
-cartoes = []
-if indices:
-    if "IBOV" in indices:
-        cartoes.append(("Ibovespa", f"{indices['IBOV']['preco']:,.0f}", indices['IBOV']['var'], indices['IBOV']['pct'], "", False))
-    if "USD" in indices:
-        cartoes.append(("Dólar", f"{indices['USD']['preco']:.4f}", indices['USD']['var'], indices['USD']['pct'], "R$ ", False))
-    if "DOW" in indices:
-        cartoes.append(("US30 / Dow Jones", f"{indices['DOW']['preco']:,.2f}", indices['DOW']['var'], indices['DOW']['pct'], "", False))
-    if "NASDAQ" in indices:
-        cartoes.append(("NAS100 / Nasdaq", f"{indices['NASDAQ']['preco']:,.2f}", indices['NASDAQ']['var'], indices['NASDAQ']['pct'], "", False))
-    if "BTC" in indices:
-        cartoes.append(("Bitcoin", f"{indices['BTC']['preco']:,.0f}", indices['BTC']['var'], indices['BTC']['pct'], "R$ ", False))
+with col2:
+    st.markdown(f"### 📈 Frequência das dezenas nos últimos {len(concursos)} concursos")
 
-for ticker in tickers_filtrados:
-    info = precos_lote.get(ticker)
-    if info and info["preco"]:
-        cartoes.append((ticker, f"{info['preco']:.2f}", info['var'], info['pct'], "R$ ", is_tracking_aba))
+    grafico_freq = df_freq.copy()
+    grafico_freq = grafico_freq.sort_values("dezena")
 
-# ==========================================
-# --- 5. RENDERIZAÇÃO CONDICIONAL DAS TELAS ---
-# ==========================================
+    st.bar_chart(
+        grafico_freq,
+        x="dezena",
+        y="frequencia",
+        use_container_width=True
+    )
 
-# 🔹 TELA 1: MEU PORTFÓLIO
-if tela_ativa == "📊 Meu Portfólio":
-    col_esq, col_dir = st.columns([1.2, 1.0], gap="large")
+# ============================================================
+# ATRASOS
+# ============================================================
 
-    with col_esq:
-        st.markdown("### 📊 Meu Portfólio & Acompanhamento", unsafe_allow_html=True)
-        
-        COLUNAS_INTERNAS = 4
-        if cartoes:
-            for i in range(0, len(cartoes), COLUNAS_INTERNAS):
-                cols_sub = st.columns(COLUNAS_INTERNAS)
-                for j in range(COLUNAS_INTERNAS):
-                    if i + j < len(cartoes):
-                        titulo, valor, var, pct, prefixo, is_watch = cartoes[i+j]
-                        with cols_sub[j]:
-                            st.markdown(criar_cartao_html(titulo, valor, var, pct, prefixo, is_watch), unsafe_allow_html=True)
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🧊 Dezenas em atraso")
 
-        st.subheader("🌐 Panorama do Mercado")
-        ativos_reais_grafico = [a["Ticker"] for a in st.session_state["carteira"] if a["Ticker"] != "CAIXA" and eh_patrimonio_real(a)]
-        opcoes_grafico = {"Ibovespa": "BMFBOVESPA:IBOV"}
-        for ativo in set(ativos_reais_grafico): opcoes_grafico[ativo] = f"BMFBOVESPA:{ativo}"
-        grafico_escolhido = st.selectbox("Gráfico Principal:", list(opcoes_grafico.keys()), label_visibility="collapsed")
-        
-        codigo_grafico_avancado = f"""
-        <div class="tradingview-widget-container" style="height:400px;width:100%">
-          <div id="tradingview_chart" style="height:calc(100% - 32px);width:100%"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-          <script type="text/javascript">
-          new TradingView.widget({{"autosize": true, "symbol": "{opcoes_grafico[grafico_escolhido]}", "interval": "D", "timezone": "America/Sao_Paulo", "theme": "dark", "style": "1", "locale": "br", "container_id": "tradingview_chart", "backgroundColor": "#161A25"}});
-          </script>
-        </div>
-        """
-        components.html(codigo_grafico_avancado, height=400)
+col1, col2 = st.columns(2)
 
-        st.divider()
-        st.subheader("📊 Distribuição do Patrimônio Global")
-        df_global = pd.DataFrame([a for a in st.session_state["carteira"] if a["Ticker"] != "CAIXA" and eh_patrimonio_real(a)])
-        if not df_global.empty:
-            df_grp_global = df_global.groupby('Ticker').agg({'Quantidade': 'sum'}).reset_index()
-            precos_global = buscar_cotacoes_lote(df_grp_global['Ticker'].tolist())
-            lista_graf = []
-            for _, row in df_grp_global.iterrows():
-                g_info = precos_global.get(row['Ticker'])
-                if g_info and g_info['preco']:
-                    patrimonio = row['Quantidade'] * g_info['preco']
-                    cat = 'FIIs' if row['Ticker'].endswith('11') else 'Ações'
-                    lista_graf.append({'Ativo': row['Ticker'], 'Patrimônio': patrimonio, 'Categoria': cat})
-            if lista_graf:
-                df_g = pd.DataFrame(lista_graf)
-                c_pie, c_bar = st.columns(2)
-                fig_pie = px.pie(df_g.groupby('Categoria')['Patrimônio'].sum().reset_index(), values='Patrimônio', names='Categoria', hole=0.5, color_discrete_sequence=['#00c698', '#1b4d3e'])
-                fig_pie.update_layout(margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', font_color="white")
-                c_pie.plotly_chart(fig_pie, use_container_width=True)
-                
-                fig_bar = px.bar(df_g.sort_values(by="Patrimônio", ascending=False), x='Ativo', y='Patrimônio', color='Categoria', text_auto='.2s', color_discrete_map={"Ações": "#1b4d3e", "FIIs": "#00c698"})
-                fig_bar.update_layout(margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', font_color="white")
-                c_bar.plotly_chart(fig_bar, use_container_width=True)
+with col1:
+    dezenas_atrasadas = df_atrasos.head(10)
 
-    with col_dir:
-        st.radio("Seletor de Carteiras", carteiras_existentes, key="carteira_ativa_radio")
-        
-        if not dados_aba:
-            st.info("Esta pasta está vazia de ativos.")
-            df_agrupado = pd.DataFrame()
+    html_atrasadas = ""
+
+    for _, row in dezenas_atrasadas.iterrows():
+        html_atrasadas += f'<span class="dezena-fria">{row["dezena"]}</span>'
+
+    st.markdown(html_atrasadas, unsafe_allow_html=True)
+
+    st.dataframe(
+        dezenas_atrasadas.rename(
+            columns={
+                "dezena": "Dezena",
+                "atraso": "Concursos sem sair"
+            }
+        ),
+        use_container_width=True,
+        hide_index=True
+    )
+
+with col2:
+    grafico_atrasos = df_atrasos.copy()
+    grafico_atrasos = grafico_atrasos.sort_values("dezena")
+
+    st.bar_chart(
+        grafico_atrasos,
+        x="dezena",
+        y="atraso",
+        use_container_width=True
+    )
+
+# ============================================================
+# BASE SUGERIDA (ADAPTADA PARA NÚMEROS FIXOS)
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🎯 Base sugerida")
+
+df_base = df_freq.copy()
+
+# Remove descartadas e fixas para calcular o pool de variáveis puras
+exclusoes_pool = dezenas_para_descartar + dezenas_fixas
+if exclusoes_pool:
+    df_base = df_base[~df_base["dezena"].isin(exclusoes_pool)]
+
+# Vagas livres para números que vão variar no fechamento
+vagas_variaveis = tamanho_base - len(dezenas_fixas)
+base_variavel = df_base.head(vagas_variaveis)["dezena"].tolist()
+
+# União montada e ordenada para exibição completa
+base_sugerida_completa = sorted(list(set(base_variavel + dezenas_fixas)), key=lambda x: int(x))
+
+html_base = ""
+for dezena in base_sugerida_completa:
+    if dezena in dezenas_fixas:
+        html_base += f'<span class="dezena-fixa-painel">{dezena}</span>'
+    else:
+        html_base += f'<span class="dezena-base">{dezena}</span>'
+
+st.markdown(html_base, unsafe_allow_html=True)
+
+if dezenas_fixas:
+    st.info(f"📌 As dezenas destacadas em **Roxo/Azul** são as suas fixas travadas em todos os jogos.")
+if dezenas_para_descartar:
+    st.warning("Dezenas descartadas temporariamente: " + ", ".join(dezenas_para_descartar))
+
+# ============================================================
+# GERAÇÃO DO DESDOBRAMENTO
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🧩 Geração de jogos")
+
+vagas_restantes_jogo = 15 - len(dezenas_fixas)
+
+if len(base_sugerida_completa) < 15:
+    st.error("A sua base sugerida total precisa atingir no mínimo 15 dezenas combinadas.")
+elif len(base_variavel) < vagas_restantes_jogo:
+    st.error(f"Você precisa de pelo menos {vagas_restantes_jogo} números variáveis disponíveis no pool para completar as vagas livres.")
+else:
+    total_combinacoes_base = math.comb(len(base_variavel), vagas_restantes_jogo)
+
+    st.info(
+        f"A sua estratégia atual fixa {len(dezenas_fixas)} números e combina as outras {vagas_restantes_jogo} vagas "
+        f"em cima das {len(base_variavel)} dezenas variáveis da sua base. Total de caminhos no fechamento: "
+        f"{total_combinacoes_base:,}".replace(",", ".") + " combinações."
+    )
+
+    if st.button("🎲 Gerar Novo Desdobramento", use_container_width=True, type="primary"):
+        st.session_state["jogos_gerados"] = gerar_desdobramento_com_fixos(
+            base_variavel=base_variavel,
+            fixos=dezenas_fixas,
+            qtd_jogos=qtd_jogos,
+            ultimo_resultado=dezenas_ultimo,
+            mapa_freq=mapa_freq,
+            mapa_atraso=mapa_atraso,
+            pares_min=pares_min,
+            pares_max=pares_max,
+            soma_min=soma_min,
+            soma_max=soma_max,
+            repetidas_min=repetidas_min,
+            repetidas_max=repetidas_max,
+            sobreposicao_max=sobreposicao_max
+        )
+        if not st.session_state["jogos_gerados"]:
+            st.warning("Nenhum jogo foi encontrado com os filtros atuais. Tente flexibilizar os critérios na lateral.")
         else:
-            if is_tracking_aba:
-                df_agrupado = pd.DataFrame(dados_aba).groupby('Ticker').agg({'Data da Compra': 'last'}).reset_index()
-                tabelas = []
-                for _, row in df_agrupado.iterrows():
-                    tk, dt = row['Ticker'], row['Data da Compra']
-                    inf_aba = precos_lote.get(tk)
-                    if inf_aba and inf_aba['preco']:
-                        tabelas.append({
-                            "Ativo": tk, 
-                            "Preço Atual": f"R$ {inf_aba['preco']:.2f}", 
-                            "Variação Diária": inf_aba['pct'], 
-                            "Data de Adição": dt
-                        })
-                if tabelas:
-                    df_view = pd.DataFrame(tabelas)
-                    styled = df_view.style.format({"Variação Diária": "{:+.2f}%"}).map(
-                        lambda v: f"color: {'#00e676' if v > 0 else '#ff4b4b'}; font-weight: bold;" if isinstance(v, (int, float)) else '', 
-                        subset=["Variação Diária"]
-                    )
-                    st.dataframe(styled, use_container_width=True, hide_index=True)
-            else:
-                df_ledger = pd.DataFrame(dados_aba)
-                df_ledger["Custo"] = df_ledger["Quantidade"] * df_ledger["Preço Pago"]
-                df_agrupado = df_ledger.groupby('Ticker').agg({'Quantidade': 'sum', 'Custo': 'sum', 'Data da Compra': 'last'}).reset_index()
-                df_agrupado['Preço Médio'] = df_agrupado.apply(lambda r: r['Custo'] / r['Quantidade'] if r['Quantidade'] > 0 else 0, axis=1)
+            st.success(f"{len(st.session_state['jogos_gerados'])} jogos gerados com sucesso travando as dezenas fixas!")
 
-                tabelas, tot_inv, tot_atu = [], 0, 0
+# ============================================================
+# IMPRESSÃO E CENTRAL DE CONFERÊNCIA
+# ============================================================
 
-                for _, row in df_agrupado.iterrows():
-                    tk, qtd, pm, cst, dt = row['Ticker'], row['Quantidade'], row['Preço Médio'], row['Custo'], row['Data da Compra']
-                    inf_aba = precos_lote.get(tk)
-                    if inf_aba and inf_aba['preco']:
-                        v_atu = qtd * inf_aba['preco']
-                        lucro = v_atu - cst
-                        tot_inv += cst
-                        tot_atu += v_atu
-                        tabelas.append({"Ativo": tk, "Qtd": int(qtd), "Preço Médio": f"R$ {pm:.2f}", "Custo Total": f"R$ {cst:.2f}", "Lucro/Prejuízo": lucro, "Rent. (%)": (lucro/cst)*100 if cst > 0 else 0, "Data": dt})
-
-                if tabelas:
-                    df_view = pd.DataFrame(tabelas)
-                    styled = df_view.style.format({"Lucro/Prejuízo": "R$ {:+.2f}", "Rent. (%)": "{:+.2f}%"}).map(lambda v: f"color: {'#00e676' if v > 0 else '#ff4b4b'}; font-weight: bold;" if isinstance(v, (int, float)) else '', subset=["Lucro/Prejuízo", "Rent. (%)"])
-                    st.dataframe(styled, use_container_width=True, hide_index=True)
-
-                    st.markdown("### Resumo Global")
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Totalmente Investido", f"R$ {tot_inv:,.2f}")
-                    c2.metric("Patrimônio Atual", f"R$ {tot_atu:,.2f}", f"R$ {tot_atu - tot_inv:,.2f}")
-                    c3.metric("Rentabilidade Geral", f"{(((tot_atu - tot_inv) / tot_inv) * 100 if tot_inv > 0 else 0):.2f}%")
-
-            st.markdown("### Evolução do Ativo")
-            if not df_agrupado.empty:
-                ativo_graf_aba = st.selectbox("Selecione o ativo:", df_agrupado['Ticker'].tolist(), key=f"sel_{carteira_ativa}")
-                df_hist = buscar_historico(ativo_graf_aba)
-                
-                if not df_hist.empty:
-                    fig_linha = px.line(df_hist, x='Data', y='Preço')
-                    if not is_tracking_aba:
-                        pm_ativo = df_agrupado[df_agrupado['Ticker'] == ativo_graf_aba]['Preço Médio'].values[0]
-                        fig_linha.add_hline(y=pm_ativo, line_dash="dash", line_color="#ff4b4b", annotation_text=f"PM: R$ {pm_ativo:.2f}")
-
-                        compras_ativo = pd.DataFrame(dados_aba)[pd.DataFrame(dados_aba)['Ticker'] == ativo_graf_aba]
-                        for _, compra in compras_ativo.iterrows():
-                            try:
-                                dt_plotly = datetime.strptime(compra['Data da Compra'], "%d/%m/%Y").strftime("%Y-%m-%d")
-                                qtd = compra['Quantidade']
-                                p_pago = compra['Preço Pago']
-                                if qtd > 0:
-                                    fig_linha.add_vline(x=dt_plotly, line_dash="dot", line_color="#378ADD", annotation_text=f" {int(qtd)} un @ R$ {p_pago:.2f}", annotation_position="top right")
-                            except Exception:
-                                pass
-
-                    fig_linha.update_layout(margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", height=250)
-                    fig_linha.update_traces(line_color="#00c698")
-                    st.plotly_chart(fig_linha, use_container_width=True)
-
-        # --- PAINEL: MAIORES ALTAS E BAIXAS ---
-        st.markdown("<br>", unsafe_allow_html=True)
-        altas, baixas, _ = buscar_destaques_mercado()
-        html_painel = """<style>.market-panel { background-color: #161A25; border: 1px solid #2B3040; border-radius: 8px; padding: 20px; display: flex; gap: 20px; margin-top: 10px; } .market-col { flex: 1; } .market-col:first-child { border-right: 1px solid #2B3040; padding-right: 20px; } .market-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; } .title-up { color: #00e676; } .title-down { color: #ff4b4b; } .market-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 15px; } .m-ticker { color: #2196F3; font-weight: bold; } .m-var-up { color: #00e676; font-weight: bold; } .m-var-down { color: #ff4b4b; font-weight: bold; } .btn-mais { display: block; text-align: center; background-color: #0066cc; color: white !important; padding: 12px; border-radius: 30px; text-decoration: none; font-weight: bold; margin-top: 20px; }</style><div class="market-panel"><div class="market-col"><div class="market-title title-up">⬆️ Maiores altas</div>"""
-        if altas:
-            for item in altas: html_painel += f"<div class='market-row'><span class='m-ticker'>{item['Ativo']}</span><span class='m-var-up'>+{item['Var%']:.2f}%</span><span style='color:white;'>R$ {item['Preço']:.2f}</span></div>"
-        html_painel += """</div><div class="market-col"><div class="market-title title-down">⬇️ Maiores baixas</div>"""
-        if baixas:
-            for item in baixas: html_painel += f"<div class='market-row'><span class='m-ticker'>{item['Ativo']}</span><span class='m-var-down'>{item['Var%']:.2f}%</span><span style='color:white;'>R$ {item['Preço']:.2f}</span></div>"
-        html_painel += """</div></div><a href="https://statusinvest.com.br/acoes/alta-e-baixa" target="_blank" class="btn-mais">Ver mais cotações</a>"""
-        st.markdown(html_painel, unsafe_allow_html=True)
-
-# 📅 TELA 2: MONITOR DE PROVENTOS (PlayInvest)
-elif tela_ativa == "📅 Monitor de Proventos":
-    st.markdown("### 📅 Central de Proventos & Dividendos")
-    c_provento_esq, c_provento_dir = st.columns([1.0, 1.2], gap="large")
-    with c_provento_esq:
-        st.subheader("💵 Histórico de Dividendos dos Seus Ativos")
-        st.caption("Puxando pagamentos executados recentemente das ações/FIIs salvos nas suas pastas.")
-        todos_ativos_cadastrados = list(set([a["Ticker"] for a in st.session_state["carteira"] if a["Ticker"] != "CAIXA"]))
-        if not todos_ativos_cadastrados:
-            st.info("Adicione ativos na barra lateral para ver o histórico de proventos deles aqui.")
-        else:
-            with st.spinner("Atualizando histórico de proventos..."):
-                df_divs_ativos = buscar_proventos_ativos(todos_ativos_cadastrados)
-            if not df_divs_ativos.empty:
-                df_divs_styled = df_divs_ativos.style.format({"Valor": "R$ {:.4f}"}).map(
-                    lambda v: 'color: #00e676; font-weight: bold;' if isinstance(v, (int, float)) else ''
-                )
-                st.dataframe(df_divs_styled, use_container_width=True, hide_index=True)
-            else:
-                st.warning("Nenhum dividendo recente encontrado para os ativos cadastrados.")
-    with c_provento_dir:
-        st.subheader("🔍 Monitor de Proventos (PlayInvest)")
-        st.caption("Calendário completo com as próximas 'Datas Com', anúncios e pagamentos projetados do mercado.")
-        st.link_button("🔗 Abrir Monitor em Nova Aba", "https://playinvest.com.br/monitor-de-dividendos", type="primary", use_container_width=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        components.iframe("https://playinvest.com.br/monitor-de-dividendos", height=750, scrolling=True)
-
-# 🏆 TELA 3: RANKING MAIORES RECEITAS (Investidor10 Nativo)
-elif tela_ativa == "🏆 Maiores Receitas":
-    st.markdown("### 🏆 Ranking das Empresas Brasileiras por Maiores Receitas (B3)")
-    st.caption("Classificação oficial nativa das maiores companhias abertas do país classificadas por faturamento e receita líquida anual.")
+if st.session_state["jogos_gerados"]:
+    jogos_para_exibir = st.session_state["jogos_gerados"]
     
-    dados_receitas = [
-        {"Posição": 1, "Ticker": "PETR4", "Empresa": "Petrobras", "Receita Líquida": "R$ 511.9 Bilhões", "Setor": "Petróleo, Gás e Combustíveis"},
-        {"Posição": 2, "Ticker": "JBSS3", "Empresa": "JBS", "Receita Líquida": "R$ 364.3 Bilhões", "Setor": "Alimentos Processados"},
-        {"Posição": 3, "Ticker": "VALE3", "Empresa": "Vale", "Receita Líquida": "R$ 213.7 Bilhões", "Setor": "Mineração e Siderurgia"},
-        {"Posição": 4, "Ticker": "RAIZ4", "Empresa": "Raízen", "Receita Líquida": "R$ 211.4 Bilhões", "Setor": "Combustíveis / Energia"},
-        {"Posição": 5, "Ticker": "VBBR3", "Empresa": "Vibra Energia", "Receita Líquida": "R$ 162.2 Bilhões", "Setor": "Combustíveis / Distribuição"},
-        {"Posição": 6, "Ticker": "UGPA3", "Empresa": "Ultrapar", "Receita Líquida": "R$ 127.6 Bilhões", "Setor": "Infraestrutura / Distribuição"},
-        {"Posição": 7, "Ticker": "ITUB4", "Empresa": "Itaú Unibanco", "Receita Líquida": "R$ 124.8 Bilhões", "Setor": "Intermediários Financeiros"},
-        {"Posição": 8, "Ticker": "BBAS3", "Empresa": "Banco do Brasil", "Receita Líquida": "R$ 103.2 Bilhões", "Setor": "Intermediários Financeiros"},
-        {"Posição": 9, "Ticker": "MRFG3", "Empresa": "Marfrig", "Receita Líquida": "R$ 96.5 Bilhões", "Setor": "Alimentos Processados"},
-        {"Posição": 10, "Ticker": "BBDC4", "Empresa": "Bradesco", "Receita Líquida": "R$ 91.3 Bilhões", "Setor": "Intermediários Financeiros"},
-    ]
-    df_receitas = pd.DataFrame(dados_receitas)
-    st.dataframe(df_receitas, use_container_width=True, hide_index=True)
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown("## 🎟️ Conferência de Acertos")
     
+    col_conf1, col_conferir_btn = st.columns([3, 1])
+    with col_conf1:
+        selecao_concurso = st.selectbox(
+            "Selecione o concurso para conferir seus jogos atuais:",
+            options=list(opcoes_concurso.keys()),
+            label_visibility="collapsed"
+        )
+    
+    dezenas_alvo = []
+    if selecao_concurso == "Inserir Dezenas Manualmente":
+        dezenas_manuais_input = st.text_input("Digite 15 dezenas separadas por espaço (ex: 01 02 03...):")
+        if dezenas_manuais_input:
+            dezenas_alvo = [d.zfill(2) for d in dezenas_manuais_input.strip().split() if d.isdigit()][:15]
+    else:
+        dezenas_alvo = opcoes_concurso[selecao_concurso]
+        
+    if dezenas_alvo:
+        html_gabarito = "".join([f'<span class="dezena-resultado">{d}</span>' for d in dezenas_alvo])
+        st.markdown(f"<div style='margin-bottom:15px;'><strong>Gabarito de Sorteio:</strong><br>{html_gabarito}</div>", unsafe_allow_html=True)
+
+    rodar_conferencia = col_conferir_btn.button("🔍 Rodar Conferência", use_container_width=True)
+
+    contadores_premios = {11: 0, 12: 0, 13: 0, 14: 0, 15: 0}
+    mapa_acertos_jogos = {}
+
+    if dezenas_alvo:
+        for idx, item in enumerate(jogos_para_exibir):
+            acertos = set(item["jogo"]).intersection(set(dezenas_alvo))
+            qtd_acertos = len(acertos)
+            mapa_acertos_jogos[idx] = acertos
+            if qtd_acertos in contadores_premios:
+                contadores_premios[qtd_acertos] += 1
+
+        if rodar_conferencia:
+            st.markdown("### 🏆 Painel de Premiações")
+            c_p1, c_p2, c_p3, c_p4, c_p5 = st.columns(5)
+            c_p1.markdown(f'<div class="premio-card"><div class="premio-titulo">11 Acertos</div><div class="premio-valor">{contadores_premios[11]} jg</div></div>', unsafe_allow_html=True)
+            c_p2.markdown(f'<div class="premio-card"><div class="premio-titulo">12 Acertos</div><div class="premio-valor">{contadores_premios[12]} jg</div></div>', unsafe_allow_html=True)
+            c_p3.markdown(f'<div class="premio-card"><div class="premio-titulo">13 Acertos</div><div class="premio-valor">{contadores_premios[13]} jg</div></div>', unsafe_allow_html=True)
+            c_p4.markdown(f'<div class="premio-card"><div class="premio-titulo">14 Acertos</div><div class="premio-valor">{contadores_premios[14]} jg</div></div>', unsafe_allow_html=True)
+            c_p5.markdown(f'<div class="premio-card"><div class="premio-titulo">15 Acertos</div><div class="premio-valor">{contadores_premios[15]} jg</div></div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("### 📋 Seus Jogos Atuais")
+    for idx, item in enumerate(jogos_para_exibir):
+        html_jogo = ""
+        acertos_desse_jogo = mapa_acertos_jogos.get(idx, set()) if dezenas_alvo else set()
+
+        for dezena in item["jogo"]:
+            if dezena in acertos_desse_jogo and rodar_conferencia:
+                html_jogo += f'<span class="dezena-acerto">{dezena}</span>'
+            else:
+                html_jogo += f'<span class="dezena-jogo">{dezena}</span>'
+
+        texto_conferencia_stats = ""
+        if dezenas_alvo and rodar_conferencia:
+            texto_conferencia_stats = f' | Premiação: <strong style="color:#facc15;font-size:14px;">{len(acertos_desse_jogo)} ACERTOS</strong>'
+
+        st.markdown(
+            f"""
+<div class="jogo-box">
+    <div class="jogo-titulo">Jogo {idx + 1} {"🌟 (Contém Fixos)" if dezenas_fixas else ""}</div>
+    <div>{html_jogo}</div>
+    <div style="margin-top:10px;color:#cbd5e1;font-size:13px;">
+        Pares: <strong>{item["pares"]}</strong> |
+        Ímpares: <strong>{item["impares"]}</strong> |
+        Soma: <strong>{item["soma"]}</strong> |
+        Repetidas do último: <strong>{item["repetidas_ultimo"]}</strong> |
+        Score: <strong>{round(item["score"], 2)}</strong>{texto_conferencia_stats}
+    </div>
+</div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    csv = jogos_para_csv(jogos_para_exibir)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.link_button("🚀 Explorar Filtros e Mais Indicadores Diretamente no Investidor10", "https://investidor10.com.br/acoes/rankings/maiores-receitas/", type="primary", use_container_width=True)
+    st.download_button(
+        label="⬇️ Baixar desdobramento ativo em CSV",
+        data=csv,
+        file_name="desdobramento_lotofacil.csv",
+        mime="text/csv"
+    )
+else:
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.info("💡 Alinhou a estratégia de fixos e filtros na barra esquerda? Clique em 'Gerar Novo Desdobramento' para processar os bilhetes.")
 
-```
+# ============================================================
+# LEITURA COMBINATÓRIA
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 🧠 Leitura combinatória")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("### Distribuição par/ímpar")
+    if st.session_state["jogos_gerados"]:
+        df_paridade = pd.DataFrame(st.session_state["jogos_gerados"])
+        st.dataframe(
+            df_paridade[["pares", "impares", "soma", "repetidas_ultimo"]].rename(
+                columns={
+                    "pares": "Pares",
+                    "impares": "Ímpares",
+                    "soma": "Soma",
+                    "repetidas_ultimo": "Repetidas do último"
+                }
+            ),
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.caption("Gere jogos para visualizar esta leitura.")
+
+with col2:
+    st.markdown("### Repetição do último concurso")
+    if st.session_state["jogos_gerados"]:
+        repeticoes = [j["repetidas_ultimo"] for j in st.session_state["jogos_gerados"]]
+        df_repeticoes = pd.DataFrame({"Repetidas": repeticoes})
+        st.bar_chart(df_repeticoes, y="Repetidas", use_container_width=True)
+    else:
+        st.caption("Gere jogos para visualizar esta leitura.")
+
+with col3:
+    st.markdown("### Faixa de soma")
+    if st.session_state["jogos_gerados"]:
+        somas = [j["soma"] for j in st.session_state["jogos_gerados"]]
+        st.metric("Menor soma", min(somas))
+        st.metric("Maior soma", max(somas))
+        st.metric("Média", round(sum(somas) / len(somas), 2))
+    else:
+        st.caption("Gere jogos para visualizar esta leitura.")
+
+# ============================================================
+# HISTÓRICO CARREGADO
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+
+with st.expander("📚 Ver concursos analisados"):
+    linhas_historico = []
+
+    for concurso in concursos:
+        linhas_historico.append({
+            "Concurso": concurso["numero"],
+            "Data": concurso["data"],
+            "Dezenas": " ".join(concurso["dezenas"])
+        })
+
+    st.dataframe(
+        pd.DataFrame(linhas_historico),
+        use_container_width=True,
+        hide_index=True
+    )
+
+# ============================================================
+# RESUMO FINAL DA PÁGINA
+# ============================================================
+
+st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown("## 📌 Resumo do painel")
+
+st.markdown(
+    """
+<div class="info-box">
+    Este painel reúne uma análise estatística feita para a Lotofácil, incluindo frequência das dezenas,
+    seleção de base, dezenas fixas e móveis, descartes automáticos, geração controlada e conferência integrada de acertos.
+</div>
+    """,
+    unsafe_allow_html=True
+)
+
+total_combinacoes_lotofacil = math.comb(25, 15)
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Concursos analisados</div>
+    <div class="metric-value">{len(concursos)}</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col2:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Total de combinações da Lotofácil</div>
+    <div class="metric-value">{total_combinacoes_lotofacil:,}</div>
+</div>
+        """.replace(",", ","),
+        unsafe_allow_html=True
+    )
+
+with col3:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Tamanho da sua base</div>
+    <div class="metric-value">{len(base_sugerida_completa)} nros</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col4:
+    st.markdown(
+        f"""
+<div class="metric-card">
+    <div class="metric-label">Desdobramento ativo</div>
+    <div class="metric-value">{len(st.session_state["jogos_gerados"])} jogos</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown(
+    """
+<br>
+<div style="color:#94a3b8;font-size:13px;text-align:center;">
+    Análise estatística e combinatória. Este painel não garante premiação e não substitui a decisão pessoal de aposta.
+</div>
+    """,
+    unsafe_allow_html=True
+)
