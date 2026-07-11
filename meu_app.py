@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import itertools
 import math
-import base64
+import json
 from collections import Counter
 from datetime import datetime
 
@@ -1373,15 +1373,35 @@ if st.session_state["jogos_gerados"]:
             "**'Gráficos de segundo plano'** está marcado."
         )
 
-        html_b64 = base64.b64encode(html_impressao.encode("utf-8")).decode()
-        href_impressao = f"data:text/html;base64,{html_b64}"
+        conteudo_js = json.dumps(html_impressao)
 
-        st.markdown(
-            f'<a href="{href_impressao}" target="_blank" rel="noopener noreferrer">'
-            f'<button style="padding:12px 20px;font-weight:800;font-size:15px;cursor:pointer;'
-            f'border:none;border-radius:8px;background:#16a34a;color:white;margin:8px 0;">'
-            f'🖨️ Abrir para imprimir ({len(paginas_volante)} volante(s))</button></a>',
-            unsafe_allow_html=True
+        botao_abrir_html = f"""
+<div style="display:flex; justify-content:flex-start;">
+  <button id="btn-abrir-impressao" style="
+        padding:12px 20px;font-weight:800;font-size:15px;cursor:pointer;
+        border:none;border-radius:8px;background:#16a34a;color:white;
+        font-family:sans-serif;">
+    🖨️ Abrir para imprimir ({len(paginas_volante)} volante(s))
+  </button>
+</div>
+<script>
+  const conteudoImpressao = {conteudo_js};
+  const btn = document.getElementById('btn-abrir-impressao');
+  btn.addEventListener('click', function() {{
+      const blob = new Blob([conteudoImpressao], {{ type: 'text/html' }});
+      const url = URL.createObjectURL(blob);
+      const nova = window.open(url, '_blank');
+      if (!nova) {{
+          btn.innerText = '⚠️ Seu navegador bloqueou o pop-up — permita pop-ups para este site e clique de novo';
+      }}
+  }});
+</script>
+"""
+        components.html(botao_abrir_html, height=70)
+
+        st.caption(
+            "Se o botão acima não abrir nada (pop-up bloqueado), use o botão de download abaixo: baixe o "
+            "arquivo e depois abra ele manualmente clicando duas vezes (ou arraste pro navegador)."
         )
 
         st.download_button(
