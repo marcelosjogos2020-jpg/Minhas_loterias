@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import itertools
 import math
+import random
 import json
 from collections import Counter
 from datetime import datetime
@@ -21,21 +22,24 @@ st.set_page_config(
 # ============================================================
 # ESTADO DA SESSÃO (SESSION STATE)
 # ============================================================
+
 if "jogos_gerados" not in st.session_state:
     st.session_state["jogos_gerados"] = []
 
+# 🔧 NOVO: salva as fixas para garantir persistência
+if "dezenas_fixas_salvas" not in st.session_state:
+    st.session_state["dezenas_fixas_salvas"] = []
+
 # Calibração da posição de impressão do volante (em milímetros)
-# Esses valores representam o CENTRO do número 21 (canto sup. esquerdo)
-# de cada caixa do volante físico já colado na folha A4.
 if "calib_volante" not in st.session_state:
     st.session_state["calib_volante"] = {
-        "x1": 25.0,   # Caixa 1 - posição X do número 21
-        "y1": 42.0,   # Caixa 1 - posição Y do número 21
-        "x2": 25.0,   # Caixa 2 - posição X do número 21
-        "y2": 150.0,  # Caixa 2 - posição Y do número 21
-        "dx": 12.5,   # espaçamento horizontal entre colunas
-        "dy": 8.0,    # espaçamento vertical entre linhas
-        "raio": 2.2   # raio da marca impressa
+        "x1": 25.0,
+        "y1": 42.0,
+        "x2": 25.0,
+        "y2": 150.0,
+        "dx": 12.5,
+        "dy": 8.0,
+        "raio": 2.2
     }
 
 # ============================================================
@@ -49,23 +53,19 @@ st.markdown(
         background-color: #0b111a;
         color: #ffffff;
     }
-
     .main {
         background-color: #0b111a;
     }
-
     h1, h2, h3 {
         color: #ffffff;
         font-weight: 900;
     }
-
     .subtitulo {
         font-size: 22px;
         color: #ffffff;
         font-weight: 800;
         margin-bottom: 24px;
     }
-
     .ultimo-sorteio {
         border: 2px solid #1e88ff;
         border-radius: 12px;
@@ -74,31 +74,26 @@ st.markdown(
         background: linear-gradient(90deg, #111827, #162033);
         box-shadow: 0 0 14px rgba(30,136,255,0.28);
     }
-
     .ultimo-label {
         font-size: 14px;
         color: #93c5fd;
         font-weight: 800;
         margin-bottom: 12px;
     }
-
     .ultimo-concurso {
         font-size: 22px;
         color: #ffffff;
         font-weight: 900;
         margin-bottom: 16px;
     }
-
     .ultimo-local {
         color: #ffffff;
         font-size: 14px;
         margin-bottom: 20px;
     }
-
     .ultimo-local strong {
         color: #ffffff;
     }
-
     .dezenas-resultado-container {
         display: flex;
         flex-wrap: wrap;
@@ -106,7 +101,6 @@ st.markdown(
         align-items: center;
         margin-top: 8px;
     }
-
     .dezena-resultado {
         display: inline-flex;
         justify-content: center;
@@ -124,7 +118,6 @@ st.markdown(
             inset 0 2px 5px rgba(255,255,255,0.25),
             inset 0 -4px 8px rgba(0,0,0,0.22);
     }
-
     .info-box {
         background: #1c2d45;
         border-left: 4px solid #1e88ff;
@@ -135,7 +128,6 @@ st.markdown(
         font-size: 14px;
         font-weight: 700;
     }
-
     .metric-card {
         background: #111821;
         border: 1px solid #2d3b4f;
@@ -144,24 +136,20 @@ st.markdown(
         text-align: center;
         min-height: 95px;
     }
-
     .metric-label {
         font-size: 13px;
         color: #9bd1ff;
         margin-bottom: 12px;
     }
-
     .metric-value {
         color: #2f83ff;
         font-size: 24px;
         font-weight: 900;
     }
-
     .section-divider {
         border-top: 1px solid #2d3b4f;
         margin: 30px 0;
     }
-
     .dezena-base {
         display: inline-flex;
         justify-content: center;
@@ -175,8 +163,6 @@ st.markdown(
         margin: 4px;
         box-shadow: 0 0 8px rgba(30,136,255,0.45);
     }
-
-    /* Estilo para destacar as dezenas fixas na base */
     .dezena-fixa-painel {
         display: inline-flex;
         justify-content: center;
@@ -191,7 +177,6 @@ st.markdown(
         border: 2px solid #818cf8;
         box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
     }
-
     .dezena-fria {
         display: inline-flex;
         justify-content: center;
@@ -205,7 +190,6 @@ st.markdown(
         margin: 4px;
         box-shadow: 0 0 8px rgba(239,68,68,0.45);
     }
-
     .jogo-box {
         background: #111821;
         border: 1px solid #2d3b4f;
@@ -213,13 +197,11 @@ st.markdown(
         padding: 14px;
         margin-bottom: 10px;
     }
-
     .jogo-titulo {
         color: #93c5fd;
         font-weight: 800;
         margin-bottom: 8px;
     }
-
     .dezena-jogo {
         display: inline-flex;
         justify-content: center;
@@ -233,7 +215,21 @@ st.markdown(
         margin: 3px;
         font-size: 12px;
     }
-
+    .dezena-jogo-fixa {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #818cf8, #6366f1);
+        color: white;
+        font-weight: 800;
+        margin: 3px;
+        font-size: 12px;
+        border: 2px solid #a5b4fc;
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+    }
     .dezena-acerto {
         display: inline-flex;
         justify-content: center;
@@ -248,7 +244,21 @@ st.markdown(
         font-size: 12px;
         box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
     }
-
+    .dezena-acerto-fixa {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #c084fc, #7c3aed 65%, #5b21b6);
+        color: white;
+        font-weight: 800;
+        margin: 3px;
+        font-size: 12px;
+        border: 2px solid #a78bfa;
+        box-shadow: 0 0 10px rgba(124, 58, 237, 0.7);
+    }
     .premio-card {
         background: #16222f;
         border: 1px solid #ca8a04;
@@ -265,22 +275,19 @@ st.markdown(
         font-weight: 900;
         color: #facc15;
     }
-
     .stDownloadButton button {
         background-color: #16a34a !important;
         color: white !important;
         border-radius: 8px;
         font-weight: 800;
     }
-
-    /* ---------- VOLANTE VISUAL (pré-visualização na tela) ---------- */
+    /* ---------- VOLANTE VISUAL ---------- */
     .volante-grid-geral {
         display: flex;
         flex-wrap: wrap;
         gap: 26px;
         align-items: flex-start;
     }
-
     .volante-grupo {
         display: flex;
         flex-direction: column;
@@ -290,20 +297,17 @@ st.markdown(
         border-radius: 12px;
         padding: 12px;
     }
-
     .volante-grupo-titulo {
         color: #93c5fd;
         font-weight: 800;
         margin-bottom: 8px;
         font-size: 14px;
     }
-
     .volante-wrapper {
         display: flex;
         gap: 22px;
         flex-wrap: wrap;
     }
-
     .volante-caixa {
         background: #fdf6d8;
         border: 2px solid #c9a94f;
@@ -311,7 +315,6 @@ st.markdown(
         padding: 16px;
         max-width: 260px;
     }
-
     .volante-titulo {
         color: #5c4a1a;
         font-weight: 900;
@@ -319,14 +322,12 @@ st.markdown(
         text-align: center;
         font-size: 13px;
     }
-
     .volante-linha {
         display: flex;
         gap: 6px;
         margin-bottom: 6px;
         justify-content: center;
     }
-
     .volante-cel {
         width: 34px;
         height: 34px;
@@ -340,7 +341,6 @@ st.markdown(
         font-size: 12px;
         color: #5c4a1a;
     }
-
     .volante-cel-marcada {
         width: 34px;
         height: 34px;
@@ -491,6 +491,42 @@ def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
     return score_freq + score_atraso * 0.25
 
 
+# ============================================================
+# 🚀 NOVA FUNÇÃO: Seleção ponderada das variáveis
+# ============================================================
+
+def selecionar_variaveis_ponderadas(pool_variaveis, vagas, mapa_freq, mapa_atraso):
+    """
+    Seleciona 'vagas' números do pool, com probabilidade proporcional
+    ao score combinado: frequência + 25% do atraso.
+    Isso garante que as variáveis misturem as MAIS FREQUENTES
+    com as MAIS ATRASADAS — exatamente como você projetou.
+    """
+    pool = list(pool_variaveis)
+    selecionados = []
+
+    for _ in range(vagas):
+        pesos = []
+        for d in pool:
+            freq_score = mapa_freq.get(d, 0)
+            atraso_score = mapa_atraso.get(d, 0) * 0.25
+            score = freq_score + atraso_score
+            pesos.append(max(score, 0.01))
+
+        total = sum(pesos)
+        probs = [p / total for p in pesos]
+        escolhido = random.choices(pool, weights=probs, k=1)[0]
+
+        selecionados.append(escolhido)
+        pool.remove(escolhido)
+
+    return sorted(selecionados, key=lambda x: int(x))
+
+
+# ============================================================
+# 🚀 FUNÇÃO CORRIGIDA: Geração do desdobramento
+# ============================================================
+
 def gerar_desdobramento_com_fixos(
     base_variavel,
     fixos,
@@ -506,25 +542,55 @@ def gerar_desdobramento_com_fixos(
     repetidas_max,
     sobreposicao_max
 ):
+    """
+    Gera jogos de 15 dezenas com:
+    - fixos: SEMPRE presentes em 100% dos jogos (até 9)
+    - variáveis: selecionadas com peso (frequência + atraso)
+    - filtros: par/ímpar, soma, repetidas do último, sobreposição
+    """
     vagas_restantes = 15 - len(fixos)
-    combinacoes_variaveis = list(itertools.combinations(base_variavel, vagas_restantes))
-
     jogos_validos = []
+    tentativas_max = qtd_jogos * 500  # margem generosa
+    tentativas = 0
 
-    for combo in combinacoes_variaveis:
-        jogo = sorted(list(fixos) + list(combo), key=lambda x: int(x))
+    while len(jogos_validos) < qtd_jogos and tentativas < tentativas_max:
+        tentativas += 1
+
+        # 🔧 Seleciona variáveis com peso (frequentes + atrasadas)
+        variaveis = selecionar_variaveis_ponderadas(
+            base_variavel, vagas_restantes, mapa_freq, mapa_atraso
+        )
+
+        # 🔧 Fixos SEMPRE entram primeiro
+        jogo = sorted(list(fixos) + variaveis, key=lambda x: int(x))
         stats = staticas_jogo(jogo, ultimo_resultado)
 
+        # Filtros
         if not (pares_min <= stats["pares"] <= pares_max):
             continue
-
         if not (soma_min <= stats["soma"] <= soma_max):
             continue
-
         if not (repetidas_min <= stats["repetidas_ultimo"] <= repetidas_max):
             continue
 
         pontos = pontuar_jogo(jogo, mapa_freq, mapa_atraso)
+
+        # Verifica sobreposição máxima com jogos já selecionados
+        jogo_set = set(jogo)
+        sobrepoe = False
+        for existente in jogos_validos:
+            intersecao = len(jogo_set.intersection(set(existente["jogo"])))
+            if intersecao > sobreposicao_max:
+                sobrepoe = True
+                break
+
+        if sobrepoe:
+            continue
+
+        # Verifica se é duplicata exata
+        jogo_key = "-".join(jogo)
+        if any("-".join(e["jogo"]) == jogo_key for e in jogos_validos):
+            continue
 
         jogos_validos.append({
             "jogo": jogo,
@@ -535,40 +601,15 @@ def gerar_desdobramento_com_fixos(
             "repetidas_ultimo": stats["repetidas_ultimo"]
         })
 
-    jogos_validos = sorted(jogos_validos, key=lambda x: x["score"], reverse=True)
+    # Se não conseguiu a quantidade desejada, avisa
+    if len(jogos_validos) < qtd_jogos:
+        st.warning(
+            f"⚠️ Só foi possível gerar {len(jogos_validos)} de {qtd_jogos} jogos "
+            f"com os filtros atuais (após {tentativas} tentativas). "
+            f"Tente flexibilizar os critérios (soma, pares, repetidas ou sobreposição)."
+        )
 
-    selecionados = []
-
-    for item in jogos_validos:
-        jogo_atual = set(item["jogo"])
-
-        if not selecionados:
-            selecionados.append(item)
-        else:
-            aprovado = True
-
-            for selecionado in selecionados:
-                intersecao = len(jogo_atual.intersection(set(selecionado["jogo"])))
-
-                if intersecao > sobreposicao_max:
-                    aprovado = False
-                    break
-
-            if aprovado:
-                selecionados.append(item)
-
-        if len(selecionados) >= qtd_jogos:
-            break
-
-    if len(selecionados) < qtd_jogos:
-        for item in jogos_validos:
-            if item not in selecionados:
-                selecionados.append(item)
-
-            if len(selecionados) >= qtd_jogos:
-                break
-
-    return selecionados[:qtd_jogos]
+    return jogos_validos
 
 
 def jogos_para_csv(jogos):
@@ -598,15 +639,10 @@ def jogos_para_csv(jogos):
 # ============================================================
 
 def numero_da_celula(linha, coluna):
-    """
-    Reproduz a disposição oficial do volante da Lotofácil:
-    coluna 0 (esquerda) = 21..25 | coluna 4 (direita) = 01..05
-    """
     return (4 - coluna) * 5 + (linha + 1)
 
 
 def renderizar_volante_visual(jogo, titulo):
-    """Gera o HTML de um volante (grade 5x5) com os números do jogo pintados."""
     jogo_set = set(jogo) if jogo else set()
 
     linhas_html = ""
@@ -630,7 +666,6 @@ def renderizar_volante_visual(jogo, titulo):
 
 
 def calcular_posicoes_mm(x0, y0, dx, dy):
-    """Retorna {dezena: (x_mm, y_mm)} para uma das duas caixas do volante."""
     posicoes = {}
     for c in range(5):
         for r in range(5):
@@ -642,11 +677,6 @@ def calcular_posicoes_mm(x0, y0, dx, dy):
 
 
 def montar_paginas_volante(jogos):
-    """
-    Agrupa a lista de jogos em pares (Caixa 1 / Caixa 2), reproduzindo o
-    padrão oficial do volante físico da Lotofácil (2 caixas por folha).
-    Retorna uma lista de dicts: {"rotulo1", "jogo1", "rotulo2", "jogo2"}.
-    """
     paginas = []
     total = len(jogos)
     i = 0
@@ -669,27 +699,15 @@ def montar_paginas_volante(jogos):
 
 
 def gerar_html_impressao_volante(paginas, calib):
-    """
-    Monta um HTML A4 contendo APENAS as marcas dos jogos (sem nenhum desenho
-    do volante), para imprimir por cima do(s) volante(s) físico(s) já
-    colado(s) na folha A4. Os volantes são organizados lado a lado
-    (horizontal), o máximo que couber por folha, antes de pular para a
-    próxima página.
-
-    As marcas são desenhadas como SVG (círculo preenchido), não como
-    background CSS — isso evita que a impressão saia em branco quando a
-    opção "Gráficos de segundo plano" do navegador está desligada.
-    """
     x1, y1 = calib["x1"], calib["y1"]
     x2, y2 = calib["x2"], calib["y2"]
     dx, dy = calib["dx"], calib["dy"]
     raio = calib["raio"]
     diametro = raio * 2
 
-    margem_pagina = 10.0   # mm de margem externa da folha
-    margem_bloco = 12.0    # mm de respiro ao redor de cada volante
+    margem_pagina = 10.0
+    margem_bloco = 12.0
 
-    # Caixa delimitadora (bounding box) de UM volante (caixa1 + caixa2 juntas)
     esquerda = min(x1, x2) - margem_bloco
     topo = min(y1, y2) - margem_bloco
     direita = max(x1, x2) + dx * 4 + margem_bloco
@@ -705,7 +723,6 @@ def gerar_html_impressao_volante(paginas, calib):
     linhas = max(1, int(altura_util // altura_bloco))
     por_pagina = colunas * linhas
 
-    # Posição de cada caixa relativa ao canto superior-esquerdo do próprio bloco
     rel_x1, rel_y1 = x1 - esquerda, y1 - topo
     rel_x2, rel_y2 = x2 - esquerda, y2 - topo
 
@@ -912,7 +929,7 @@ qtd_concursos = st.sidebar.number_input(
     "Quantidade de concursos para análise",
     min_value=5,
     max_value=100,
-    value=11,
+    value=20,
     step=1
 )
 
@@ -934,13 +951,17 @@ qtd_jogos = st.sidebar.number_input(
 
 st.sidebar.divider()
 
-# 🚀 ALTERAÇÃO 1: max_selections de 5 → 9
+# 🔧 MULTISELECT COM SESSION STATE (garante persistência)
 dezenas_fixas = st.sidebar.multiselect(
     "Dezenas FIXAS (Presentes em todos os bilhetes - Máx 9)",
     options=[str(i).zfill(2) for i in range(1, 25 + 1)],
-    default=[],
-    max_selections=9
+    default=st.session_state["dezenas_fixas_salvas"],
+    max_selections=9,
+    key="fixas_widget"
 )
+
+# 🔧 Sincroniza com session_state
+st.session_state["dezenas_fixas_salvas"] = dezenas_fixas
 
 dezenas_para_descartar = st.sidebar.multiselect(
     "Dezenas temporariamente descartadas",
@@ -1101,7 +1122,6 @@ for dezena in base_sugerida_completa:
 
 st.markdown(html_base, unsafe_allow_html=True)
 
-# 🚀 ALTERAÇÃO 2: 5 → 9 no texto do info
 if dezenas_fixas:
     st.info(
         f"📌 As dezenas destacadas em **Roxo/Azul** são as suas fixas travadas em todos os jogos "
@@ -1129,14 +1149,19 @@ else:
 
     st.info(
         f"A sua estratégia atual fixa {len(dezenas_fixas)} números e combina as outras {vagas_restantes_jogo} vagas "
-        f"em cima das {len(base_variavel)} dezenas variáveis da sua base. Total de caminhos no fechamento: "
+        f"em cima das {len(base_variavel)} dezenas variáveis da sua base. "
+        f"**Seleção ponderada**: as variáveis são sorteadas com peso, misturando as mais frequentes com as mais atrasadas. "
+        f"Total de caminhos possíveis no fechamento: "
         f"{total_combinacoes_base:,}".replace(",", ".") + " combinações."
     )
 
     if st.button("🎲 Gerar Novo Desdobramento", use_container_width=True, type="primary"):
+        # 🔧 Usa SEMPRE a versão salva no session_state
+        fixos_garantidos = st.session_state["dezenas_fixas_salvas"]
+
         st.session_state["jogos_gerados"] = gerar_desdobramento_com_fixos(
             base_variavel=base_variavel,
-            fixos=dezenas_fixas,
+            fixos=fixos_garantidos,
             qtd_jogos=qtd_jogos,
             ultimo_resultado=dezenas_ultimo,
             mapa_freq=mapa_freq,
@@ -1149,10 +1174,14 @@ else:
             repetidas_max=repetidas_max,
             sobreposicao_max=sobreposicao_max
         )
+
         if not st.session_state["jogos_gerados"]:
             st.warning("Nenhum jogo foi encontrado com os filtros atuais. Tente flexibilizar os critérios na lateral.")
         else:
-            st.success(f"{len(st.session_state['jogos_gerados'])} jogos gerados com sucesso travando as dezenas fixas!")
+            st.success(
+                f"✅ {len(st.session_state['jogos_gerados'])} jogos gerados com sucesso! "
+                f"As {len(fixos_garantidos)} fixas estão **travadas em 100% dos bilhetes**."
+            )
 
 # ============================================================
 # IMPRESSÃO E CENTRAL DE CONFERÊNCIA
@@ -1160,6 +1189,9 @@ else:
 
 if st.session_state["jogos_gerados"]:
     jogos_para_exibir = st.session_state["jogos_gerados"]
+
+    # 🔧 Referência às fixas para destaque visual
+    fixos_visuais = st.session_state["dezenas_fixas_salvas"]
 
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     st.markdown("## 🎟️ Conferência de Acertos")
@@ -1208,24 +1240,43 @@ if st.session_state["jogos_gerados"]:
             st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("### 📋 Seus Jogos Atuais")
+
+    fixos_set = set(fixos_visuais)
+
     for idx, item in enumerate(jogos_para_exibir):
         html_jogo = ""
         acertos_desse_jogo = mapa_acertos_jogos.get(idx, set()) if dezenas_alvo else set()
 
         for dezena in item["jogo"]:
-            if dezena in acertos_desse_jogo and rodar_conferencia:
+            eh_fixa = dezena in fixos_set
+            eh_acerto = dezena in acertos_desse_jogo and rodar_conferencia
+
+            if eh_fixa and eh_acerto:
+                # Fixa que acertou → roxo brilhante
+                html_jogo += f'<span class="dezena-acerto-fixa">{dezena}</span>'
+            elif eh_fixa:
+                # Fixa (não acertou) → roxo normal
+                html_jogo += f'<span class="dezena-jogo-fixa">{dezena}</span>'
+            elif eh_acerto:
+                # Variável que acertou → dourado
                 html_jogo += f'<span class="dezena-acerto">{dezena}</span>'
             else:
+                # Variável normal → verde
                 html_jogo += f'<span class="dezena-jogo">{dezena}</span>'
 
         texto_conferencia_stats = ""
         if dezenas_alvo and rodar_conferencia:
-            texto_conferencia_stats = f' | Premiação: <strong style="color:#facc15;font-size:14px;">{len(acertos_desse_jogo)} ACERTOS</strong>'
+            qtd = len(acertos_desse_jogo)
+            cor = "#facc15" if qtd >= 13 else ("#22c55e" if qtd >= 11 else "#94a3b8")
+            texto_conferencia_stats = f' | Premiação: <strong style="color:{cor};font-size:14px;">{qtd} ACERTOS</strong>'
 
         st.markdown(
             f"""
 <div class="jogo-box">
-    <div class="jogo-titulo">Jogo {idx + 1} {"🌟 (Contém Fixos)" if dezenas_fixas else ""}</div>
+    <div class="jogo-titulo">
+        Jogo {idx + 1}
+        {"🌟 (Fixo)" if fixos_visuais else ""}
+    </div>
     <div>{html_jogo}</div>
     <div style="margin-top:10px;color:#cbd5e1;font-size:13px;">
         Pares: <strong>{item["pares"]}</strong> |
@@ -1249,7 +1300,7 @@ if st.session_state["jogos_gerados"]:
     )
 
     # ============================================================
-    # VOLANTE VISUAL + IMPRESSÃO EM A4 (SÓ AS MARCAS)
+    # VOLANTE VISUAL + IMPRESSÃO EM A4
     # ============================================================
 
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
