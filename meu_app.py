@@ -1,15 +1,16 @@
-import streamlit as st
-import streamlit.components.v1 as components
+import itertools
+import json
+import math
+from collections import Counter
+
 import pandas as pd
 import requests
-import itertools
-import math
-import json
-from collections import Counter
+import streamlit as st
+import streamlit.components.v1 as components
 
 
 # ============================================================
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO
 # ============================================================
 
 st.set_page_config(
@@ -45,327 +46,296 @@ if "calib_volante" not in st.session_state:
 st.markdown(
     """
 <style>
-    html, body, [class*="css"] {
-        background-color: #0b111a;
-        color: #ffffff;
-    }
+html, body, [class*="css"] {
+    background-color: #0b111a;
+    color: #ffffff;
+}
 
-    .main {
-        background-color: #0b111a;
-    }
+.main {
+    background-color: #0b111a;
+}
 
-    h1, h2, h3 {
-        color: #ffffff;
-        font-weight: 900;
-    }
+h1, h2, h3, h4 {
+    color: #ffffff;
+    font-weight: 900;
+}
 
-    .subtitulo {
-        font-size: 22px;
-        color: #ffffff;
-        font-weight: 800;
-        margin-bottom: 24px;
-    }
+.subtitulo {
+    font-size: 22px;
+    color: #ffffff;
+    font-weight: 800;
+    margin-bottom: 24px;
+}
 
-    .ultimo-sorteio {
-        border: 2px solid #1e88ff;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 12px 0 26px 0;
-        background: linear-gradient(90deg, #111827, #162033);
-        box-shadow: 0 0 14px rgba(30,136,255,0.28);
-    }
+.section-divider {
+    border-top: 1px solid #2d3b4f;
+    margin: 30px 0;
+}
 
-    .ultimo-label {
-        font-size: 14px;
-        color: #93c5fd;
-        font-weight: 800;
-        margin-bottom: 12px;
-    }
+.info-box {
+    background: #1c2d45;
+    border-left: 4px solid #1e88ff;
+    color: #ffffff;
+    padding: 16px 18px;
+    border-radius: 8px;
+    margin: 20px 0 14px 0;
+    font-size: 14px;
+    font-weight: 700;
+}
 
-    .ultimo-concurso {
-        font-size: 22px;
-        color: #ffffff;
-        font-weight: 900;
-        margin-bottom: 16px;
-    }
+.ultimo-sorteio {
+    border: 2px solid #1e88ff;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 12px 0 26px 0;
+    background: linear-gradient(90deg, #111827, #162033);
+    box-shadow: 0 0 14px rgba(30,136,255,0.28);
+}
 
-    .ultimo-local {
-        color: #ffffff;
-        font-size: 14px;
-        margin-bottom: 20px;
-    }
+.ultimo-label {
+    font-size: 14px;
+    color: #93c5fd;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
 
-    .ultimo-local strong {
-        color: #ffffff;
-    }
+.ultimo-concurso {
+    font-size: 22px;
+    color: #ffffff;
+    font-weight: 900;
+    margin-bottom: 16px;
+}
 
-    .dezenas-resultado-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-        margin-top: 8px;
-    }
+.ultimo-local {
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
 
-    .dezena-resultado {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: radial-gradient(
-            circle at 30% 30%,
-            #5cff75,
-            #16a34a 65%,
-            #0f7a35
-        );
-        color: #ffffff;
-        font-weight: 900;
-        font-size: 13px;
-        border: 2px solid rgba(255,255,255,0.18);
-        box-shadow:
-            0 0 10px rgba(34,197,94,0.45),
-            inset 0 2px 5px rgba(255,255,255,0.25),
-            inset 0 -4px 8px rgba(0,0,0,0.22);
-    }
+.dezenas-resultado-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
 
-    .info-box {
-        background: #1c2d45;
-        border-left: 4px solid #1e88ff;
-        color: #ffffff;
-        padding: 16px 18px;
-        border-radius: 8px;
-        margin: 20px 0 14px 0;
-        font-size: 14px;
-        font-weight: 700;
-    }
+.dezena-resultado,
+.dezena-base,
+.dezena-fixa-painel,
+.dezena-fria,
+.dezena-jogo,
+.dezena-acerto {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    color: white;
+    font-weight: 900;
+}
 
-    .metric-card {
-        background: #111821;
-        border: 1px solid #2d3b4f;
-        border-radius: 10px;
-        padding: 22px 16px;
-        text-align: center;
-        min-height: 95px;
-    }
+.dezena-resultado {
+    width: 36px;
+    height: 36px;
+    background: radial-gradient(
+        circle at 30% 30%,
+        #5cff75,
+        #16a34a 65%,
+        #0f7a35
+    );
+    font-size: 13px;
+    border: 2px solid rgba(255,255,255,0.18);
+    box-shadow: 0 0 10px rgba(34,197,94,0.45);
+}
 
-    .metric-label {
-        font-size: 13px;
-        color: #9bd1ff;
-        margin-bottom: 12px;
-    }
+.dezena-base {
+    width: 38px;
+    height: 38px;
+    background: #1e88ff;
+    margin: 4px;
+    box-shadow: 0 0 8px rgba(30,136,255,0.45);
+}
 
-    .metric-value {
-        color: #2f83ff;
-        font-size: 24px;
-        font-weight: 900;
-    }
+.dezena-fixa-painel {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    margin: 4px;
+    border: 2px solid #818cf8;
+    box-shadow: 0 0 12px rgba(99,102,241,0.7);
+}
 
-    .section-divider {
-        border-top: 1px solid #2d3b4f;
-        margin: 30px 0;
-    }
+.dezena-fria {
+    width: 38px;
+    height: 38px;
+    background: #ef4444;
+    margin: 4px;
+    box-shadow: 0 0 8px rgba(239,68,68,0.45);
+}
 
-    .dezena-base {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: #1e88ff;
-        color: white;
-        font-weight: 900;
-        margin: 4px;
-        box-shadow: 0 0 8px rgba(30,136,255,0.45);
-    }
+.metric-card {
+    background: #111821;
+    border: 1px solid #2d3b4f;
+    border-radius: 10px;
+    padding: 22px 16px;
+    text-align: center;
+    min-height: 95px;
+}
 
-    .dezena-fixa-painel {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #6366f1, #4f46e5);
-        color: white;
-        font-weight: 900;
-        margin: 4px;
-        border: 2px solid #818cf8;
-        box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
-    }
+.metric-label {
+    font-size: 13px;
+    color: #9bd1ff;
+    margin-bottom: 12px;
+}
 
-    .dezena-fria {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: #ef4444;
-        color: white;
-        font-weight: 900;
-        margin: 4px;
-        box-shadow: 0 0 8px rgba(239,68,68,0.45);
-    }
+.metric-value {
+    color: #2f83ff;
+    font-size: 24px;
+    font-weight: 900;
+}
 
-    .jogo-box {
-        background: #111821;
-        border: 1px solid #2d3b4f;
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 10px;
-    }
+.jogo-box {
+    background: #111821;
+    border: 1px solid #2d3b4f;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+}
 
-    .jogo-titulo {
-        color: #93c5fd;
-        font-weight: 800;
-        margin-bottom: 8px;
-    }
+.jogo-titulo {
+    color: #93c5fd;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
 
-    .dezena-jogo {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #16a34a;
-        color: white;
-        font-weight: 800;
-        margin: 3px;
-        font-size: 12px;
-    }
+.dezena-jogo,
+.dezena-acerto {
+    width: 32px;
+    height: 32px;
+    margin: 3px;
+    font-size: 12px;
+}
 
-    .dezena-acerto {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: radial-gradient(
-            circle at 30% 30%,
-            #facc15,
-            #ca8a04 65%,
-            #854d0e
-        );
-        color: white;
-        font-weight: 800;
-        margin: 3px;
-        font-size: 12px;
-        box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
-    }
+.dezena-jogo {
+    background: #16a34a;
+}
 
-    .premio-card {
-        background: #16222f;
-        border: 1px solid #ca8a04;
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-    }
+.dezena-acerto {
+    background: radial-gradient(
+        circle at 30% 30%,
+        #facc15,
+        #ca8a04 65%,
+        #854d0e
+    );
+    box-shadow: 0 0 8px rgba(234,179,8,0.6);
+}
 
-    .premio-titulo {
-        font-size: 12px;
-        color: #fef08a;
-    }
+.premio-card {
+    background: #16222f;
+    border: 1px solid #ca8a04;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+}
 
-    .premio-valor {
-        font-size: 20px;
-        font-weight: 900;
-        color: #facc15;
-    }
+.premio-titulo {
+    font-size: 12px;
+    color: #fef08a;
+}
 
-    .stDownloadButton button {
-        background-color: #16a34a !important;
-        color: white !important;
-        border-radius: 8px;
-        font-weight: 800;
-    }
+.premio-valor {
+    font-size: 20px;
+    font-weight: 900;
+    color: #facc15;
+}
 
-    .volante-grid-geral {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 26px;
-        align-items: flex-start;
-    }
+.stDownloadButton button {
+    background-color: #16a34a !important;
+    color: white !important;
+    border-radius: 8px;
+    font-weight: 800;
+}
 
-    .volante-grupo {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        background: #0d1420;
-        border: 1px solid #2d3b4f;
-        border-radius: 12px;
-        padding: 12px;
-    }
+.volante-grid-geral {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 26px;
+    align-items: flex-start;
+}
 
-    .volante-grupo-titulo {
-        color: #93c5fd;
-        font-weight: 800;
-        margin-bottom: 8px;
-        font-size: 14px;
-    }
+.volante-grupo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0d1420;
+    border: 1px solid #2d3b4f;
+    border-radius: 12px;
+    padding: 12px;
+}
 
-    .volante-wrapper {
-        display: flex;
-        gap: 22px;
-        flex-wrap: wrap;
-    }
+.volante-grupo-titulo {
+    color: #93c5fd;
+    font-weight: 800;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
 
-    .volante-caixa {
-        background: #fdf6d8;
-        border: 2px solid #c9a94f;
-        border-radius: 10px;
-        padding: 16px;
-        max-width: 260px;
-    }
+.volante-wrapper {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+}
 
-    .volante-titulo {
-        color: #5c4a1a;
-        font-weight: 900;
-        margin-bottom: 10px;
-        text-align: center;
-        font-size: 13px;
-    }
+.volante-caixa {
+    background: #fdf6d8;
+    border: 2px solid #c9a94f;
+    border-radius: 10px;
+    padding: 16px;
+    max-width: 260px;
+}
 
-    .volante-linha {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 6px;
-        justify-content: center;
-    }
+.volante-titulo {
+    color: #5c4a1a;
+    font-weight: 900;
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 13px;
+}
 
-    .volante-cel,
-    .volante-cel-marcada {
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        font-size: 12px;
-    }
+.volante-linha {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    justify-content: center;
+}
 
-    .volante-cel {
-        background: #fffbe8;
-        border: 2px solid #c9a94f;
-        color: #5c4a1a;
-    }
+.volante-cel,
+.volante-cel-marcada {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 12px;
+}
 
-    .volante-cel-marcada {
-        background: radial-gradient(
-            circle at 30% 30%,
-            #5cff75,
-            #16a34a 65%,
-            #0f7a35
-        );
-        border: 2px solid #0f7a35;
-        color: white;
-        box-shadow: 0 0 8px rgba(34,197,94,0.55);
-    }
+.volante-cel {
+    background: #fffbe8;
+    border: 2px solid #c9a94f;
+    color: #5c4a1a;
+}
+
+.volante-cel-marcada {
+    background: radial-gradient(
+        circle at 30% 30%,
+        #5cff75,
+        #16a34a 65%,
+        #0f7a35
+    );
+    border: 2px solid #0f7a35;
+    color: white;
+    box-shadow: 0 0 8px rgba(34,197,94,0.55);
+}
 </style>
 """,
     unsafe_allow_html=True
@@ -373,7 +343,7 @@ st.markdown(
 
 
 # ============================================================
-# BUSCA DOS CONCURSOS NA CAIXA
+# CONSTANTES
 # ============================================================
 
 BASE_URL = (
@@ -381,6 +351,15 @@ BASE_URL = (
     "portaldeloterias/api/lotofacil"
 )
 
+UNIVERSO = [
+    str(numero).zfill(2)
+    for numero in range(1, 26)
+]
+
+
+# ============================================================
+# FUNÇÕES DE API
+# ============================================================
 
 @st.cache_data(ttl=600)
 def buscar_concurso(numero=None):
@@ -389,20 +368,26 @@ def buscar_concurso(numero=None):
         "Accept": "application/json,text/plain,*/*"
     }
 
-    url = BASE_URL if numero is None else f"{BASE_URL}/{numero}"
+    url = BASE_URL
 
-    response = requests.get(
+    if numero is not None:
+        url = f"{BASE_URL}/{int(numero)}"
+
+    resposta = requests.get(
         url,
         headers=headers,
-        timeout=20
+        timeout=30
     )
 
-    response.raise_for_status()
+    resposta.raise_for_status()
 
-    dados = response.json()
+    dados = resposta.json()
 
     dezenas = dados.get("listaDezenas", [])
-    dezenas = [str(d).zfill(2) for d in dezenas]
+    dezenas = [
+        str(dezena).zfill(2)
+        for dezena in dezenas
+    ]
 
     return {
         "numero": dados.get("numero"),
@@ -411,28 +396,32 @@ def buscar_concurso(numero=None):
         "municipio": (
             dados.get("nomeMunicipioUFSorteio")
             or dados.get("nomeMunicipioSorteio")
+            or ""
         ),
-        "local": dados.get("localSorteio"),
+        "local": dados.get("localSorteio") or "",
         "raw": dados
     }
 
 
 @st.cache_data(ttl=600)
-def carregar_concursos(qtd):
+def carregar_concursos(quantidade):
     ultimo = buscar_concurso()
-    numero_ultimo = int(ultimo["numero"])
 
+    if not ultimo.get("numero"):
+        return []
+
+    ultimo_numero = int(ultimo["numero"])
     concursos = []
 
     for numero in range(
-        numero_ultimo,
-        numero_ultimo - qtd,
+        ultimo_numero,
+        ultimo_numero - int(quantidade),
         -1
     ):
         try:
             concurso = buscar_concurso(numero)
 
-            if concurso["dezenas"]:
+            if len(concurso["dezenas"]) == 15:
                 concursos.append(concurso)
 
         except Exception:
@@ -442,47 +431,35 @@ def carregar_concursos(qtd):
 
 
 # ============================================================
-# FUNÇÕES DE ANÁLISE
+# FUNÇÕES ESTATÍSTICAS
 # ============================================================
 
 def analisar_concursos(concursos):
-    todas_dezenas = []
+    todas = []
 
     for concurso in concursos:
-        todas_dezenas.extend(concurso["dezenas"])
+        todas.extend(concurso["dezenas"])
 
-    frequencia = Counter(todas_dezenas)
+    contador = Counter(todas)
 
-    universo = [
-        str(i).zfill(2)
-        for i in range(1, 26)
-    ]
-
-    df_freq = pd.DataFrame({
-        "dezena": universo,
+    tabela = pd.DataFrame({
+        "dezena": UNIVERSO,
         "frequencia": [
-            frequencia.get(dezena, 0)
-            for dezena in universo
+            contador.get(dezena, 0)
+            for dezena in UNIVERSO
         ]
     })
 
-    df_freq = df_freq.sort_values(
-        by=["frequencia", "dezena"],
+    return tabela.sort_values(
+        ["frequencia", "dezena"],
         ascending=[False, True]
     ).reset_index(drop=True)
 
-    return df_freq
-
 
 def calcular_atrasos(concursos):
-    universo = [
-        str(i).zfill(2)
-        for i in range(1, 26)
-    ]
-
     atrasos = {}
 
-    for dezena in universo:
+    for dezena in UNIVERSO:
         atraso = 0
 
         for concurso in concursos:
@@ -493,66 +470,61 @@ def calcular_atrasos(concursos):
 
         atrasos[dezena] = atraso
 
-    df_atrasos = pd.DataFrame({
+    tabela = pd.DataFrame({
         "dezena": list(atrasos.keys()),
         "atraso": list(atrasos.values())
     })
 
-    df_atrasos = df_atrasos.sort_values(
-        by=["atraso", "dezena"],
+    return tabela.sort_values(
+        ["atraso", "dezena"],
         ascending=[False, True]
     ).reset_index(drop=True)
 
-    return df_atrasos
-
 
 def estatisticas_jogo(jogo, ultimo_resultado):
-    numeros = [int(x) for x in jogo]
+    numeros = [int(dezena) for dezena in jogo]
 
     pares = sum(
-        1 for numero in numeros
-        if numero % 2 == 0
+        numero % 2 == 0
+        for numero in numeros
     )
 
-    impares = 15 - pares
-    soma = sum(numeros)
-
-    repetidas_ultimo = len(
+    repetidas = len(
         set(jogo).intersection(set(ultimo_resultado))
     )
 
     return {
         "pares": pares,
-        "impares": impares,
-        "soma": soma,
-        "repetidas_ultimo": repetidas_ultimo
+        "impares": 15 - pares,
+        "soma": sum(numeros),
+        "repetidas_ultimo": repetidas
     }
 
 
-def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
-    score_freq = sum(
-        mapa_freq.get(dezena, 0)
+def pontuar_jogo(jogo, mapa_frequencia, mapa_atraso):
+    pontos_frequencia = sum(
+        mapa_frequencia.get(dezena, 0)
         for dezena in jogo
     )
 
-    score_atraso = sum(
+    pontos_atraso = sum(
         mapa_atraso.get(dezena, 0)
         for dezena in jogo
     )
 
-    return score_freq + score_atraso * 0.25
+    return pontos_frequencia + pontos_atraso * 0.25
 
 
 # ============================================================
-# GERAÇÃO DE JOGOS COM ATÉ 9 FIXAS
+# GERAÇÃO DOS JOGOS
 # ============================================================
 
-def gerar_desdobramento_com_fixos(
+def gerar_desdobramento(
     base_variavel,
-    fixos,
-    qtd_jogos,
+    fixas,
+    quantidade_jogos,
     ultimo_resultado,
-    mapa_freq,
+    mapa_frequencia,
     mapa_atraso,
     pares_min,
     pares_max,
@@ -562,114 +534,124 @@ def gerar_desdobramento_com_fixos(
     repetidas_max,
     sobreposicao_max
 ):
-    vagas_restantes = 15 - len(fixos)
-
-    combinacoes_variaveis = itertools.combinations(
-        base_variavel,
-        vagas_restantes
+    fixas = sorted(
+        set(fixas),
+        key=int
     )
+
+    base_variavel = sorted(
+        set(base_variavel) - set(fixas),
+        key=int
+    )
+
+    vagas = 15 - len(fixas)
+
+    if vagas <= 0:
+        return []
+
+    if len(base_variavel) < vagas:
+        return []
 
     jogos_validos = []
 
-    for combo in combinacoes_variaveis:
+    for combinacao in itertools.combinations(
+        base_variavel,
+        vagas
+    ):
         jogo = sorted(
-            list(fixos) + list(combo),
-            key=lambda x: int(x)
+            fixas + list(combinacao),
+            key=int
         )
 
-        stats = estatisticas_jogo(
+        estatisticas = estatisticas_jogo(
             jogo,
             ultimo_resultado
         )
 
         if not (
             pares_min
-            <= stats["pares"]
+            <= estatisticas["pares"]
             <= pares_max
         ):
             continue
 
         if not (
             soma_min
-            <= stats["soma"]
+            <= estatisticas["soma"]
             <= soma_max
         ):
             continue
 
         if not (
             repetidas_min
-            <= stats["repetidas_ultimo"]
+            <= estatisticas["repetidas_ultimo"]
             <= repetidas_max
         ):
             continue
 
-        pontos = pontuar_jogo(
+        score = pontuar_jogo(
             jogo,
-            mapa_freq,
+            mapa_frequencia,
             mapa_atraso
         )
 
         jogos_validos.append({
             "jogo": jogo,
-            "score": pontos,
-            "pares": stats["pares"],
-            "impares": stats["impares"],
-            "soma": stats["soma"],
+            "score": score,
+            "pares": estatisticas["pares"],
+            "impares": estatisticas["impares"],
+            "soma": estatisticas["soma"],
             "repetidas_ultimo": (
-                stats["repetidas_ultimo"]
+                estatisticas["repetidas_ultimo"]
             )
         })
 
-    jogos_validos = sorted(
-        jogos_validos,
-        key=lambda x: x["score"],
+    jogos_validos.sort(
+        key=lambda item: item["score"],
         reverse=True
     )
 
     selecionados = []
 
-    for item in jogos_validos:
-        jogo_atual = set(item["jogo"])
+    for candidato in jogos_validos:
+        conjunto_atual = set(candidato["jogo"])
+        aprovado = True
 
-        if not selecionados:
-            selecionados.append(item)
-        else:
-            aprovado = True
-
-            for selecionado in selecionados:
-                intersecao = len(
-                    jogo_atual.intersection(
-                        set(selecionado["jogo"])
-                    )
+        for selecionado in selecionados:
+            intersecao = len(
+                conjunto_atual.intersection(
+                    set(selecionado["jogo"])
                 )
+            )
 
-                if intersecao > sobreposicao_max:
-                    aprovado = False
-                    break
-
-            if aprovado:
-                selecionados.append(item)
-
-        if len(selecionados) >= qtd_jogos:
-            break
-
-    if len(selecionados) < qtd_jogos:
-        for item in jogos_validos:
-            if item not in selecionados:
-                selecionados.append(item)
-
-            if len(selecionados) >= qtd_jogos:
+            if intersecao > sobreposicao_max:
+                aprovado = False
                 break
 
-    return selecionados[:qtd_jogos]
+        if aprovado:
+            selecionados.append(candidato)
+
+        if len(selecionados) >= quantidade_jogos:
+            break
+
+    # Completa a quantidade se o filtro de sobreposição for rígido
+    if len(selecionados) < quantidade_jogos:
+        for candidato in jogos_validos:
+            if candidato not in selecionados:
+                selecionados.append(candidato)
+
+            if len(selecionados) >= quantidade_jogos:
+                break
+
+    return selecionados[:quantidade_jogos]
 
 
 def jogos_para_csv(jogos):
     linhas = []
 
-    for idx, item in enumerate(jogos, start=1):
+    for numero, item in enumerate(jogos, start=1):
         linha = {
-            "Jogo": idx,
+            "Jogo": numero,
             "Dezenas": " ".join(item["jogo"]),
             "Pares": item["pares"],
             "Ímpares": item["impares"],
@@ -680,11 +662,11 @@ def jogos_para_csv(jogos):
             "Score": round(item["score"], 2)
         }
 
-        for pos, dezena in enumerate(
+        for posicao, dezena in enumerate(
             item["jogo"],
             start=1
         ):
-            linha[f"D{pos:02d}"] = dezena
+            linha[f"D{posicao:02d}"] = dezena
 
         linhas.append(linha)
 
@@ -701,48 +683,54 @@ def jogos_para_csv(jogos):
 
 def numero_da_celula(linha, coluna):
     """
-    Coluna esquerda: 21 até 25.
-    Coluna direita: 01 até 05.
+    O volante é organizado assim:
+
+    21 16 11 06 01
+    22 17 12 07 02
+    23 18 13 08 03
+    24 19 14 09 04
+    25 20 15 10 05
     """
     return (4 - coluna) * 5 + (linha + 1)
 
 
 def renderizar_volante_visual(jogo, titulo):
-    jogo_set = set(jogo) if jogo else set()
+    jogo_set = set(jogo or [])
+    linhas = ""
 
-    linhas_html = ""
+    for linha in range(5):
+        celulas = ""
 
-    for r in range(5):
-        celulas_html = ""
+        for coluna in range(5):
+            numero = numero_da_celula(
+                linha,
+                coluna
+            )
 
-        for c in range(5):
-            numero = numero_da_celula(r, c)
-            num_str = str(numero).zfill(2)
-
-            marcado = num_str in jogo_set
+            numero_texto = str(numero).zfill(2)
 
             classe = (
                 "volante-cel-marcada"
-                if marcado
+                if numero_texto in jogo_set
                 else "volante-cel"
             )
 
-            celulas_html += (
+            celulas += (
                 f'<div class="{classe}">'
-                f'{num_str}'
+                f'{numero_texto}'
                 f'</div>'
             )
 
-        linhas_html += (
-            f'<div class="volante-linha">'
-            f'{celulas_html}'
-            f'</div>'
+        linhas += (
+            '<div class="volante-linha">'
+            f'{celulas}'
+            '</div>'
         )
 
     return (
         '<div class="volante-caixa">'
         f'<div class="volante-titulo">{titulo}</div>'
-        f'<div>{linhas_html}</div>'
+        f'{linhas}'
         '</div>'
     )
 
@@ -750,18 +738,16 @@ def renderizar_volante_visual(jogo, titulo):
 def calcular_posicoes_mm(x0, y0, dx, dy):
     posicoes = {}
 
-    for c in range(5):
-        for r in range(5):
-            numero = numero_da_celula(r, c)
+    for coluna in range(5):
+        for linha in range(5):
+            numero = numero_da_celula(
+                linha,
+                coluna
+            )
 
-            x = x0 + c * dx
-            y = y0 + r * dy
-
-            posicoes[
-                str(numero).zfill(2)
-            ] = (
-                round(x, 2),
-                round(y, 2)
+            posicoes[str(numero).zfill(2)] = (
+                round(x0 + coluna * dx, 2),
+                round(y0 + linha * dy, 2)
             )
 
     return posicoes
@@ -770,45 +756,42 @@ def calcular_posicoes_mm(x0, y0, dx, dy):
 def montar_paginas_volante(jogos):
     paginas = []
 
-    total = len(jogos)
-    i = 0
-    numero_jogo = 1
-
-    while i < total:
-        jogo1 = jogos[i]["jogo"]
-        rotulo1 = f"Jogo {numero_jogo}"
+    for inicio in range(0, len(jogos), 2):
+        jogo1 = jogos[inicio]
 
         jogo2 = None
-        rotulo2 = None
 
-        if i + 1 < total:
-            jogo2 = jogos[i + 1]["jogo"]
-            rotulo2 = f"Jogo {numero_jogo + 1}"
+        if inicio + 1 < len(jogos):
+            jogo2 = jogos[inicio + 1]
 
         paginas.append({
-            "rotulo1": rotulo1,
-            "jogo1": jogo1,
-            "rotulo2": rotulo2,
-            "jogo2": jogo2
+            "rotulo1": f"Jogo {inicio + 1}",
+            "jogo1": jogo1["jogo"],
+            "rotulo2": (
+                f"Jogo {inicio + 2}"
+                if jogo2
+                else None
+            ),
+            "jogo2": (
+                jogo2["jogo"]
+                if jogo2
+                else None
+            )
         })
-
-        i += 2
-        numero_jogo += 2
 
     return paginas
 
 
-def gerar_html_impressao_volante(paginas, calib):
-    x1 = calib["x1"]
-    y1 = calib["y1"]
-    x2 = calib["x2"]
-    y2 = calib["y2"]
-    dx = calib["dx"]
-    dy = calib["dy"]
-    raio = calib["raio"]
+def gerar_html_impressao(paginas, calib):
+    x1 = float(calib["x1"])
+    y1 = float(calib["y1"])
+    x2 = float(calib["x2"])
+    y2 = float(calib["y2"])
+    dx = float(calib["dx"])
+    dy = float(calib["dy"])
+    raio = float(calib["raio"])
 
     diametro = raio * 2
-
     margem_pagina = 10.0
     margem_bloco = 12.0
 
@@ -830,8 +813,8 @@ def gerar_html_impressao_volante(paginas, calib):
     largura_bloco = direita - esquerda
     altura_bloco = base - topo
 
-    largura_util = 210 - (2 * margem_pagina)
-    altura_util = 297 - (2 * margem_pagina)
+    largura_util = 210 - 2 * margem_pagina
+    altura_util = 297 - 2 * margem_pagina
 
     colunas = max(
         1,
@@ -843,59 +826,57 @@ def gerar_html_impressao_volante(paginas, calib):
         int(altura_util // altura_bloco)
     )
 
-    por_pagina = colunas * linhas
+    por_folha = colunas * linhas
 
     rel_x1 = x1 - esquerda
     rel_y1 = y1 - topo
-
     rel_x2 = x2 - esquerda
     rel_y2 = y2 - topo
 
-    total_paginas_fisicas = math.ceil(
-        len(paginas) / por_pagina
+    total_folhas = max(
+        1,
+        math.ceil(len(paginas) / por_folha)
     )
 
-    def svg_marca(x, y):
+    def marca_svg(x, y):
         return (
-            f'<svg class="marca" '
-            f'style="left:{x - raio}mm; '
+            '<svg class="marca" '
+            f'style="left:{x - raio}mm;'
             f'top:{y - raio}mm;" '
             f'width="{diametro}mm" '
             f'height="{diametro}mm" '
-            f'viewBox="0 0 10 10">'
+            'viewBox="0 0 10 10">'
             '<circle cx="5" cy="5" r="5" '
             'fill="#000000"/>'
             '</svg>'
         )
 
-    def guia_ponto(x, y, num):
+    def guia(x, y, numero):
         return (
-            f'<div class="guia" '
-            f'style="left:{x}mm; top:{y}mm;">'
-            f'{num}'
+            '<div class="guia" '
+            f'style="left:{x}mm;top:{y}mm;">'
+            f'{numero}'
             '</div>'
         )
 
-    folhas_html = ""
+    folhas = ""
 
-    for pagina_idx in range(
-        total_paginas_fisicas
-    ):
-        blocos_html = ""
+    for folha_numero in range(total_folhas):
+        blocos = ""
 
-        inicio = pagina_idx * por_pagina
+        inicio = folha_numero * por_folha
         fim = min(
-            inicio + por_pagina,
+            inicio + por_folha,
             len(paginas)
         )
 
-        for pos, idx_volante in enumerate(
+        for posicao, indice in enumerate(
             range(inicio, fim)
         ):
-            pagina = paginas[idx_volante]
+            pagina = paginas[indice]
 
-            linha = pos // colunas
-            coluna = pos % colunas
+            linha = posicao // colunas
+            coluna = posicao % colunas
 
             origem_x = (
                 margem_pagina
@@ -907,241 +888,204 @@ def gerar_html_impressao_volante(paginas, calib):
                 + linha * altura_bloco
             )
 
-            fx1 = origem_x + rel_x1
-            fy1 = origem_y + rel_y1
-
-            fx2 = origem_x + rel_x2
-            fy2 = origem_y + rel_y2
-
-            pos1 = calcular_posicoes_mm(
-                fx1,
-                fy1,
+            posicoes1 = calcular_posicoes_mm(
+                origem_x + rel_x1,
+                origem_y + rel_y1,
                 dx,
                 dy
             )
 
-            pos2 = calcular_posicoes_mm(
-                fx2,
-                fy2,
+            posicoes2 = calcular_posicoes_mm(
+                origem_x + rel_x2,
+                origem_y + rel_y2,
                 dx,
                 dy
             )
 
-            jogo1_set = (
-                set(pagina["jogo1"])
-                if pagina["jogo1"]
-                else set()
-            )
+            jogo1 = set(pagina["jogo1"] or [])
+            jogo2 = set(pagina["jogo2"] or [])
 
-            jogo2_set = (
-                set(pagina["jogo2"])
-                if pagina["jogo2"]
-                else set()
-            )
+            guias = ""
+            marcas = ""
 
-            marcas_html = ""
-            guia_html = ""
+            for numero, coordenadas in posicoes1.items():
+                x, y = coordenadas
+                guias += guia(x, y, numero)
 
-            for num, (x, y) in pos1.items():
-                guia_html += guia_ponto(x, y, num)
+                if numero in jogo1:
+                    marcas += marca_svg(x, y)
 
-                if num in jogo1_set:
-                    marcas_html += svg_marca(x, y)
+            for numero, coordenadas in posicoes2.items():
+                x, y = coordenadas
+                guias += guia(x, y, numero)
 
-            for num, (x, y) in pos2.items():
-                guia_html += guia_ponto(x, y, num)
-
-                if num in jogo2_set:
-                    marcas_html += svg_marca(x, y)
+                if numero in jogo2:
+                    marcas += marca_svg(x, y)
 
             rotulo = pagina["rotulo1"]
 
             if pagina["rotulo2"]:
                 rotulo += f" e {pagina['rotulo2']}"
 
-            blocos_html += (
-                '<div class="no-print rotulo-folha" '
-                f'style="left:{origem_x}mm; '
+            blocos += (
+                '<div class="rotulo no-print" '
+                f'style="left:{origem_x}mm;'
                 f'top:{origem_y - 6}mm;">'
-                f'Volante {idx_volante + 1} — {rotulo}'
+                f'Volante {indice + 1} — {rotulo}'
                 '</div>'
-                f'{guia_html}'
-                f'{marcas_html}'
+                f'{guias}'
+                f'{marcas}'
             )
 
         quebra = (
             "always"
-            if pagina_idx < total_paginas_fisicas - 1
+            if folha_numero < total_folhas - 1
             else "auto"
         )
 
-        folhas_html += (
-            f'<div class="folha" '
+        folhas += (
+            '<div class="folha" '
             f'style="page-break-after:{quebra};">'
-            f'{blocos_html}'
+            f'{blocos}'
             '</div>'
         )
 
-    return f"""<!DOCTYPE html>
-<html>
+    return f"""
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Volante para impressão</title>
+<title>Volantes Lotofácil</title>
 
 <style>
-    @page {{
-        size: A4;
-        margin: 0;
-    }}
+@page {{
+    size: A4;
+    margin: 0;
+}}
 
-    html, body {{
-        margin: 0;
-        padding: 0;
-        width: 210mm;
-        background: white;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        color-adjust: exact;
-    }}
+html, body {{
+    margin: 0;
+    padding: 0;
+    width: 210mm;
+    background: white;
+}}
 
-    .folha {{
-        position: relative;
-        width: 210mm;
-        height: 297mm;
-        background: white;
-    }}
+.folha {{
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    background: white;
+}}
 
-    .rotulo-folha {{
-        position: absolute;
-        font-size: 10px;
-        color: #999;
-        font-family: sans-serif;
-    }}
+.marca {{
+    position: absolute;
+}}
 
-    .marca {{
-        position: absolute;
-    }}
+.guia {{
+    position: absolute;
+    width: 2mm;
+    height: 2mm;
+    font-size: 2mm;
+    color: #bbbbbb;
+    border: 0.15mm dashed #cccccc;
+    border-radius: 50%;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}}
 
+.rotulo {{
+    position: absolute;
+    color: #999999;
+    font-size: 10px;
+    font-family: Arial, sans-serif;
+}}
+
+.barra {{
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    z-index: 10;
+    background: #111827;
+    padding: 10px;
+    color: white;
+    font-family: Arial, sans-serif;
+    border-radius: 8px;
+}}
+
+.barra button {{
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background: #16a34a;
+    color: white;
+}}
+
+@media print {{
+    .no-print,
+    .barra,
     .guia {{
-        position: absolute;
-        width: 2mm;
-        height: 2mm;
-        font-size: 2mm;
-        color: #bbbbbb;
-        border: 0.15mm dashed #cccccc;
-        border-radius: 50%;
-        text-align: center;
-        transform: translate(-50%, -50%);
+        display: none !important;
     }}
-
-    .barra-topo {{
-        position: fixed;
-        top: 8px;
-        left: 8px;
-        right: 8px;
-        z-index: 10;
-        background: #111827;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-family: sans-serif;
-        color: white;
-    }}
-
-    .barra-topo button {{
-        padding: 8px 16px;
-        font-weight: bold;
-        cursor: pointer;
-        border: none;
-        border-radius: 6px;
-        background: #16a34a;
-        color: white;
-        margin-right: 8px;
-    }}
-
-    @media print {{
-        .no-print {{
-            display: none !important;
-        }}
-
-        .guia {{
-            display: none !important;
-        }}
-    }}
+}}
 </style>
 </head>
 
 <body>
-    <div class="barra-topo no-print">
-        <button onclick="window.print()">
-            🖨️ Imprimir agora
-            ({total_paginas_fisicas} folha(s) A4 ·
-            {colunas}x{linhas} volante(s) por folha)
-        </button>
+<div class="barra no-print">
+    <button onclick="window.print()">
+        Imprimir agora
+    </button>
 
-        <span>
-            Confira o alinhamento. As linhas pontilhadas e os
-            rótulos somem na impressão.
-        </span>
-    </div>
+    <span>
+        {total_folhas} folha(s) A4 —
+        {colunas}x{linhas} volante(s) por folha
+    </span>
+</div>
 
-    {folhas_html}
+{folhas}
 </body>
 </html>
 """
 
 
 # ============================================================
-# CABEÇALHO
+# CABEÇALHO E ÚLTIMO CONCURSO
 # ============================================================
 
-st.markdown(
-    "# 🍀 Lotofácil | Análises e Desdobramentos"
-)
+st.markdown("# 🍀 Lotofácil | Análises e Desdobramentos")
 
 st.markdown(
     '<div class="subtitulo">'
-    'Painel estatístico com base nos últimos concursos analisados'
+    'Painel estatístico com base nos concursos analisados'
     '</div>',
     unsafe_allow_html=True
 )
 
-
-# ============================================================
-# ÚLTIMO SORTEIO
-# ============================================================
-
 try:
     ultimo_concurso = buscar_concurso()
 
-except Exception:
+except Exception as erro:
     st.error(
         "Não foi possível carregar o último concurso "
-        "automaticamente da Caixa."
+        f"da Caixa: {erro}"
     )
     st.stop()
-
 
 numero_ultimo = ultimo_concurso["numero"]
 data_ultimo = ultimo_concurso["data"]
 dezenas_ultimo = ultimo_concurso["dezenas"]
 
-municipio_sorteio = ultimo_concurso["municipio"]
-local_sorteio = ultimo_concurso["local"]
+local_ultimo = (
+    ultimo_concurso["municipio"]
+    or ultimo_concurso["local"]
+    or "Local não informado"
+)
 
-if municipio_sorteio:
-    texto_local = municipio_sorteio
-
-elif local_sorteio:
-    texto_local = local_sorteio
-
-else:
-    texto_local = "Local não informado"
-
-
-html_dezenas_resultado = "".join(
-    f'<span class="dezena-resultado">'
-    f'{dezena}'
-    f'</span>'
+html_dezenas = "".join(
+    f'<span class="dezena-resultado">{dezena}</span>'
     for dezena in dezenas_ultimo
 )
 
@@ -1149,7 +1093,7 @@ st.markdown(
     f"""
 <div class="ultimo-sorteio">
     <div class="ultimo-label">
-        🍀 Último sorteio carregado automaticamente da Caixa
+        🍀 Último sorteio carregado da Caixa
     </div>
 
     <div class="ultimo-concurso">
@@ -1158,11 +1102,11 @@ st.markdown(
 
     <div class="ultimo-local">
         Sorteio realizado em:
-        <strong>{texto_local}</strong>
+        <strong>{local_ultimo}</strong>
     </div>
 
     <div class="dezenas-resultado-container">
-        {html_dezenas_resultado}
+        {html_dezenas}
     </div>
 </div>
 """,
@@ -1176,7 +1120,7 @@ st.markdown(
 
 st.sidebar.header("⚙️ Configurações")
 
-qtd_concursos = st.sidebar.number_input(
+quantidade_concursos = st.sidebar.number_input(
     "Quantidade de concursos para análise",
     min_value=5,
     max_value=100,
@@ -1192,8 +1136,8 @@ tamanho_base = st.sidebar.number_input(
     step=1
 )
 
-qtd_jogos = st.sidebar.number_input(
-    "Quantidade de jogos no desdobramento",
+quantidade_jogos = st.sidebar.number_input(
+    "Quantidade de jogos",
     min_value=1,
     max_value=100,
     value=12,
@@ -1202,32 +1146,26 @@ qtd_jogos = st.sidebar.number_input(
 
 st.sidebar.divider()
 
-# ============================================================
-# ATÉ 9 DEZENAS FIXAS
-# ============================================================
-
 dezenas_fixas = st.sidebar.multiselect(
-    "Dezenas FIXAS — presentes em todos os jogos",
-    options=[
-        str(i).zfill(2)
-        for i in range(1, 26)
-    ],
+    "Dezenas FIXAS",
+    options=UNIVERSO,
     default=[],
     max_selections=9,
     help=(
-        "Você pode selecionar até 9 dezenas. "
-        "Todas as dezenas escolhidas aparecerão "
-        "obrigatoriamente em todos os jogos."
+        "As dezenas selecionadas aparecerão "
+        "em todos os jogos."
     )
 )
 
-dezenas_para_descartar = st.sidebar.multiselect(
+opcoes_descartar = [
+    dezena
+    for dezena in UNIVERSO
+    if dezena not in dezenas_fixas
+]
+
+dezenas_descartadas = st.sidebar.multiselect(
     "Dezenas temporariamente descartadas",
-    options=[
-        str(i).zfill(2)
-        for i in range(1, 26)
-        if str(i).zfill(2) not in dezenas_fixas
-    ],
+    options=opcoes_descartar,
     default=[]
 )
 
@@ -1241,16 +1179,16 @@ st.sidebar.subheader("Filtros combinatórios")
 
 pares_min = st.sidebar.slider(
     "Mínimo de pares",
-    min_value=0,
-    max_value=15,
-    value=6
+    0,
+    15,
+    6
 )
 
 pares_max = st.sidebar.slider(
     "Máximo de pares",
-    min_value=0,
-    max_value=15,
-    value=9
+    0,
+    15,
+    9
 )
 
 soma_min = st.sidebar.number_input(
@@ -1271,23 +1209,23 @@ soma_max = st.sidebar.number_input(
 
 repetidas_min = st.sidebar.slider(
     "Mínimo de repetidas do último concurso",
-    min_value=0,
-    max_value=15,
-    value=8
+    0,
+    15,
+    8
 )
 
 repetidas_max = st.sidebar.slider(
     "Máximo de repetidas do último concurso",
-    min_value=0,
-    max_value=15,
-    value=11
+    0,
+    15,
+    11
 )
 
 sobreposicao_max = st.sidebar.slider(
     "Sobreposição máxima entre jogos",
-    min_value=8,
-    max_value=15,
-    value=13
+    8,
+    15,
+    13
 )
 
 
@@ -1296,19 +1234,21 @@ sobreposicao_max = st.sidebar.slider(
 # ============================================================
 
 with st.spinner("Carregando concursos da Caixa..."):
-    concursos = carregar_concursos(qtd_concursos)
+    concursos = carregar_concursos(
+        quantidade_concursos
+    )
 
 if not concursos:
     st.error("Nenhum concurso foi carregado.")
     st.stop()
 
-df_freq = analisar_concursos(concursos)
+df_frequencia = analisar_concursos(concursos)
 df_atrasos = calcular_atrasos(concursos)
 
-mapa_freq = dict(
+mapa_frequencia = dict(
     zip(
-        df_freq["dezena"],
-        df_freq["frequencia"]
+        df_frequencia["dezena"],
+        df_frequencia["frequencia"]
     )
 )
 
@@ -1318,20 +1258,6 @@ mapa_atraso = dict(
         df_atrasos["atraso"]
     )
 )
-
-opcoes_concurso = {}
-
-for concurso in concursos:
-    chave = (
-        f"Concurso {concurso['numero']} "
-        f"({concurso['data']})"
-    )
-
-    opcoes_concurso[chave] = concurso["dezenas"]
-
-opcoes_concurso[
-    "Inserir Dezenas Manualmente"
-] = []
 
 
 # ============================================================
@@ -1343,23 +1269,18 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("## 📊 Visão Geral da Análise")
+st.markdown("## 📊 Visão geral")
 
-col1, col2 = st.columns(2)
+coluna1, coluna2 = st.columns(2)
 
-with col1:
+with coluna1:
     st.markdown("### 🔥 Dezenas mais fortes")
 
-    dezenas_fortes = df_freq.head(10)
-
-    html_fortes = ""
-
-    for _, row in dezenas_fortes.iterrows():
-        html_fortes += (
-            f'<span class="dezena-base">'
-            f'{row["dezena"]}'
-            f'</span>'
-        )
+    fortes = df_frequencia.head(10)
+    html_fortes = "".join(
+        f'<span class="dezena-base">{row.dezena}</span>'
+        for _, row in fortes.iterrows()
+    )
 
     st.markdown(
         html_fortes,
@@ -1367,7 +1288,7 @@ with col1:
     )
 
     st.dataframe(
-        dezenas_fortes.rename(
+        fortes.rename(
             columns={
                 "dezena": "Dezena",
                 "frequencia": "Frequência"
@@ -1377,17 +1298,16 @@ with col1:
         hide_index=True
     )
 
-with col2:
+with coluna2:
     st.markdown(
-        f"### 📈 Frequência das dezenas nos últimos "
+        f"### 📈 Frequência nos últimos "
         f"{len(concursos)} concursos"
     )
 
-    grafico_freq = df_freq.copy()
-    grafico_freq = grafico_freq.sort_values("dezena")
+    grafico = df_frequencia.sort_values("dezena")
 
     st.bar_chart(
-        grafico_freq,
+        grafico,
         x="dezena",
         y="frequencia",
         use_container_width=True
@@ -1395,7 +1315,7 @@ with col2:
 
 
 # ============================================================
-# DEZENAS EM ATRASO
+# ATRASOS
 # ============================================================
 
 st.markdown(
@@ -1405,19 +1325,15 @@ st.markdown(
 
 st.markdown("## 🧊 Dezenas em atraso")
 
-col1, col2 = st.columns(2)
+coluna1, coluna2 = st.columns(2)
 
-with col1:
-    dezenas_atrasadas = df_atrasos.head(10)
+with coluna1:
+    atrasadas = df_atrasos.head(10)
 
-    html_atrasadas = ""
-
-    for _, row in dezenas_atrasadas.iterrows():
-        html_atrasadas += (
-            f'<span class="dezena-fria">'
-            f'{row["dezena"]}'
-            f'</span>'
-        )
+    html_atrasadas = "".join(
+        f'<span class="dezena-fria">{row.dezena}</span>'
+        for _, row in atrasadas.iterrows()
+    )
 
     st.markdown(
         html_atrasadas,
@@ -1425,7 +1341,7 @@ with col1:
     )
 
     st.dataframe(
-        dezenas_atrasadas.rename(
+        atrasadas.rename(
             columns={
                 "dezena": "Dezena",
                 "atraso": "Concursos sem sair"
@@ -1435,9 +1351,8 @@ with col1:
         hide_index=True
     )
 
-with col2:
-    grafico_atrasos = df_atrasos.copy()
-    grafico_atrasos = grafico_atrasos.sort_values("dezena")
+with coluna2:
+    grafico_atrasos = df_atrasos.sort_values("dezena")
 
     st.bar_chart(
         grafico_atrasos,
@@ -1458,21 +1373,18 @@ st.markdown(
 
 st.markdown("## 🎯 Base sugerida")
 
-df_base = df_freq.copy()
+df_base = df_frequencia.copy()
 
-exclusoes_pool = (
-    dezenas_para_descartar
-    + dezenas_fixas
+excluir = set(
+    dezenas_fixas + dezenas_descartadas
 )
 
-if exclusoes_pool:
-    df_base = df_base[
-        ~df_base["dezena"].isin(exclusoes_pool)
-    ]
+df_base = df_base[
+    ~df_base["dezena"].isin(excluir)
+]
 
 vagas_variaveis = (
-    tamanho_base
-    - len(dezenas_fixas)
+    int(tamanho_base) - len(dezenas_fixas)
 )
 
 if vagas_variaveis < 0:
@@ -1482,26 +1394,23 @@ base_variavel = df_base.head(
     vagas_variaveis
 )["dezena"].tolist()
 
-base_sugerida_completa = sorted(
-    list(set(base_variavel + dezenas_fixas)),
-    key=lambda x: int(x)
+base_completa = sorted(
+    set(base_variavel + dezenas_fixas),
+    key=int
 )
 
 html_base = ""
 
-for dezena in base_sugerida_completa:
-    if dezena in dezenas_fixas:
-        html_base += (
-            f'<span class="dezena-fixa-painel">'
-            f'{dezena}'
-            f'</span>'
-        )
-    else:
-        html_base += (
-            f'<span class="dezena-base">'
-            f'{dezena}'
-            f'</span>'
-        )
+for dezena in base_completa:
+    classe = (
+        "dezena-fixa-painel"
+        if dezena in dezenas_fixas
+        else "dezena-base"
+    )
+
+    html_base += (
+        f'<span class="{classe}">{dezena}</span>'
+    )
 
 st.markdown(
     html_base,
@@ -1510,22 +1419,22 @@ st.markdown(
 
 if dezenas_fixas:
     st.info(
-        f"As dezenas destacadas em roxo são as suas "
-        f"{len(dezenas_fixas)} dezenas fixas. "
-        f"Elas estarão presentes em todos os jogos. "
-        f"Restam {vagas_restantes_jogo if 'vagas_restantes_jogo' in locals() else 15 - len(dezenas_fixas)} "
-        f"vagas para dezenas variáveis em cada jogo."
+        f"{len(dezenas_fixas)} dezena(s) fixa(s) "
+        f"em todos os jogos. "
+        f"Cada jogo terá "
+        f"{15 - len(dezenas_fixas)} "
+        "dezenas variáveis."
     )
 
-if dezenas_para_descartar:
+if dezenas_descartadas:
     st.warning(
-        "Dezenas descartadas temporariamente: "
-        + ", ".join(dezenas_para_descartar)
+        "Dezenas descartadas: "
+        + ", ".join(dezenas_descartadas)
     )
 
 
 # ============================================================
-# GERAÇÃO DOS JOGOS
+# GERAÇÃO
 # ============================================================
 
 st.markdown(
@@ -1535,75 +1444,73 @@ st.markdown(
 
 st.markdown("## 🧩 Geração de jogos")
 
-vagas_restantes_jogo = 15 - len(dezenas_fixas)
+vagas_jogo = 15 - len(dezenas_fixas)
 
-if vagas_restantes_jogo < 1:
+if vagas_jogo < 1:
     st.error(
         "É necessário deixar pelo menos uma vaga "
         "para uma dezena variável."
     )
 
-elif len(base_sugerida_completa) < 15:
+elif len(base_completa) < 15:
     st.error(
-        "A sua base sugerida total precisa atingir "
-        "no mínimo 15 dezenas."
+        "A base total precisa possuir pelo menos "
+        "15 dezenas."
     )
 
-elif len(base_variavel) < vagas_restantes_jogo:
+elif len(base_variavel) < vagas_jogo:
     st.error(
-        f"Você precisa de pelo menos "
-        f"{vagas_restantes_jogo} números variáveis "
-        "disponíveis para completar os jogos."
+        "Não existem dezenas variáveis suficientes "
+        "para completar os jogos."
     )
 
 else:
-    total_combinacoes_base = math.comb(
+    quantidade_combinacoes = math.comb(
         len(base_variavel),
-        vagas_restantes_jogo
+        vagas_jogo
     )
 
     st.info(
-        f"A sua estratégia fixa "
-        f"{len(dezenas_fixas)} dezena(s) e combina "
-        f"as outras {vagas_restantes_jogo} vagas "
-        f"entre {len(base_variavel)} dezenas variáveis. "
-        f"Total de caminhos: "
-        f"{total_combinacoes_base:,}".replace(",", ".")
+        f"A base possui {len(base_completa)} dezenas. "
+        f"Serão escolhidas {vagas_jogo} dezenas variáveis "
+        f"por jogo. "
+        f"Combinações possíveis: "
+        f"{quantidade_combinacoes:,}".replace(",", ".")
     )
 
     if st.button(
-        "🎲 Gerar Novo Desdobramento",
+        "🎲 Gerar novo desdobramento",
         use_container_width=True,
         type="primary"
     ):
-        st.session_state["jogos_gerados"] = (
-            gerar_desdobramento_com_fixos(
-                base_variavel=base_variavel,
-                fixos=dezenas_fixas,
-                qtd_jogos=qtd_jogos,
-                ultimo_resultado=dezenas_ultimo,
-                mapa_freq=mapa_freq,
-                mapa_atraso=mapa_atraso,
-                pares_min=pares_min,
-                pares_max=pares_max,
-                soma_min=soma_min,
-                soma_max=soma_max,
-                repetidas_min=repetidas_min,
-                repetidas_max=repetidas_max,
-                sobreposicao_max=sobreposicao_max
+        with st.spinner("Gerando jogos..."):
+            st.session_state["jogos_gerados"] = (
+                gerar_desdobramento(
+                    base_variavel=base_variavel,
+                    fixas=dezenas_fixas,
+                    quantidade_jogos=quantidade_jogos,
+                    ultimo_resultado=dezenas_ultimo,
+                    mapa_frequencia=mapa_frequencia,
+                    mapa_atraso=mapa_atraso,
+                    pares_min=pares_min,
+                    pares_max=pares_max,
+                    soma_min=soma_min,
+                    soma_max=soma_max,
+                    repetidas_min=repetidas_min,
+                    repetidas_max=repetidas_max,
+                    sobreposicao_max=sobreposicao_max
+                )
             )
-        )
 
-        if not st.session_state["jogos_gerados"]:
-            st.warning(
-                "Nenhum jogo foi encontrado com os "
-                "filtros atuais. Tente flexibilizar "
-                "os critérios."
-            )
-        else:
+        if st.session_state["jogos_gerados"]:
             st.success(
                 f"{len(st.session_state['jogos_gerados'])} "
                 "jogos gerados com sucesso."
+            )
+        else:
+            st.warning(
+                "Nenhum jogo foi encontrado. "
+                "Flexibilize os filtros."
             )
 
 
@@ -1611,69 +1518,91 @@ else:
 # CONFERÊNCIA DOS JOGOS
 # ============================================================
 
-if st.session_state["jogos_gerados"]:
-    jogos_para_exibir = st.session_state["jogos_gerados"]
+jogos = st.session_state["jogos_gerados"]
 
+if jogos:
     st.markdown(
         '<div class="section-divider"></div>',
         unsafe_allow_html=True
     )
 
-    st.markdown("## 🎟️ Conferência de Acertos")
+    st.markdown("## 🎟️ Conferência de acertos")
 
-    col_conf1, col_conferir_btn = st.columns([3, 1])
+    opcoes_conferencia = {}
 
-    with col_conf1:
-        selecao_concurso = st.selectbox(
-            "Selecione o concurso para conferir:",
-            options=list(opcoes_concurso.keys()),
-            label_visibility="collapsed"
+    for concurso in concursos:
+        nome = (
+            f"Concurso {concurso['numero']} "
+            f"({concurso['data']})"
         )
+
+        opcoes_conferencia[nome] = concurso["dezenas"]
+
+    opcoes_conferencia[
+        "Inserir dezenas manualmente"
+    ] = []
+
+    selecao = st.selectbox(
+        "Selecione o concurso:",
+        list(opcoes_conferencia.keys())
+    )
 
     dezenas_alvo = []
 
-    if selecao_concurso == "Inserir Dezenas Manualmente":
-        dezenas_manuais_input = st.text_input(
-            "Digite 15 dezenas separadas por espaço:",
-            placeholder="01 02 03 04 05..."
+    if selecao == "Inserir dezenas manualmente":
+        entrada = st.text_input(
+            "Digite as 15 dezenas separadas por espaço:",
+            placeholder="01 02 03 04 05 ..."
         )
 
-        if dezenas_manuais_input:
-            dezenas_alvo = [
-                d.zfill(2)
-                for d in dezenas_manuais_input.strip().split()
-                if d.isdigit()
-            ][:15]
+        if entrada:
+            valores = []
+
+            for valor in entrada.split():
+                if valor.isdigit():
+                    numero = int(valor)
+
+                    if 1 <= numero <= 25:
+                        valores.append(
+                            str(numero).zfill(2)
+                        )
+
+            dezenas_alvo = list(
+                dict.fromkeys(valores)
+            )[:15]
+
+        if dezenas_alvo and len(dezenas_alvo) != 15:
+            st.warning(
+                "Informe exatamente 15 dezenas válidas."
+            )
+            dezenas_alvo = []
 
     else:
-        dezenas_alvo = opcoes_concurso[
-            selecao_concurso
-        ]
+        dezenas_alvo = opcoes_conferencia[selecao]
 
     if dezenas_alvo:
-        html_gabarito = "".join(
-            f'<span class="dezena-resultado">'
-            f'{d}'
-            f'</span>'
-            for d in dezenas_alvo
+        gabarito_html = "".join(
+            f'<span class="dezena-resultado">{dezena}</span>'
+            for dezena in dezenas_alvo
         )
 
         st.markdown(
             f"""
-            <div style="margin-bottom:15px;">
-                <strong>Gabarito de Sorteio:</strong><br>
-                {html_gabarito}
+            <div style="margin:15px 0;">
+                <strong>Gabarito:</strong><br>
+                {gabarito_html}
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    rodar_conferencia = col_conferir_btn.button(
-        "🔍 Rodar Conferência",
+    conferir = st.button(
+        "🔍 Rodar conferência",
         use_container_width=True
     )
 
-    contadores_premios = {
+    acertos_por_jogo = []
+    contadores = {
         11: 0,
         12: 0,
         13: 0,
@@ -1681,480 +1610,397 @@ if st.session_state["jogos_gerados"]:
         15: 0
     }
 
-    mapa_acertos_jogos = {}
+    for item in jogos:
+        acertos = set(item["jogo"]).intersection(
+            set(dezenas_alvo)
+        )
 
-    if dezenas_alvo:
-        for idx, item in enumerate(jogos_para_exibir):
-            acertos = set(
-                item["jogo"]
-            ).intersection(
-                set(dezenas_alvo)
+        quantidade = len(acertos)
+        acertos_por_jogo.append(acertos)
+
+        if quantidade in contadores:
+            contadores[quantidade] += 1
+
+    if conferir and dezenas_alvo:
+        st.markdown("### 🏆 Painel de premiações")
+
+        colunas = st.columns(5)
+
+        for coluna, quantidade in zip(
+            colunas,
+            [11, 12, 13, 14, 15]
+        ):
+            coluna.markdown(
+                f"""
+                <div class="premio-card">
+                    <div class="premio-titulo">
+                        {quantidade} acertos
+                    </div>
+                    <div class="premio-valor">
+                        {contadores[quantidade]} jogos
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
-            qtd_acertos = len(acertos)
+    st.markdown("### 📋 Jogos gerados")
 
-            mapa_acertos_jogos[idx] = acertos
-
-            if qtd_acertos in contadores_premios:
-                contadores_premios[qtd_acertos] += 1
-
-        if rodar_conferencia:
-            st.markdown("### 🏆 Painel de Premiações")
-
-            c_p1, c_p2, c_p3, c_p4, c_p5 = st.columns(5)
-
-            premios = [
-                (c_p1, 11),
-                (c_p2, 12),
-                (c_p3, 13),
-                (c_p4, 14),
-                (c_p5, 15)
-            ]
-
-            for coluna, quantidade in premios:
-                coluna.markdown(
-                    f"""
-                    <div class="premio-card">
-                        <div class="premio-titulo">
-                            {quantidade} Acertos
-                        </div>
-                        <div class="premio-valor">
-                            {contadores_premios[quantidade]} jg
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-    st.markdown("### 📋 Seus Jogos Atuais")
-
-    for idx, item in enumerate(jogos_para_exibir):
-        html_jogo = ""
-
-        acertos_desse_jogo = (
-            mapa_acertos_jogos.get(idx, set())
-            if dezenas_alvo
+    for indice, item in enumerate(jogos):
+        acertos = (
+            acertos_por_jogo[indice]
+            if conferir and dezenas_alvo
             else set()
         )
 
+        dezenas_html = ""
+
         for dezena in item["jogo"]:
-            if (
-                dezena in acertos_desse_jogo
-                and rodar_conferencia
-            ):
-                html_jogo += (
-                    f'<span class="dezena-acerto">'
-                    f'{dezena}'
-                    f'</span>'
-                )
-            else:
-                html_jogo += (
-                    f'<span class="dezena-jogo">'
-                    f'{dezena}'
-                    f'</span>'
-                )
+            classe = (
+                "dezena-acerto"
+                if dezena in acertos
+                else "dezena-jogo"
+            )
 
-        texto_conferencia_stats = ""
+            dezenas_html += (
+                f'<span class="{classe}">{dezena}</span>'
+            )
 
-        if dezenas_alvo and rodar_conferencia:
-            texto_conferencia_stats = (
-                f' | Premiação: '
-                f'<strong style="color:#facc15;'
-                f'font-size:14px;">'
-                f'{len(acertos_desse_jogo)} ACERTOS'
-                f'</strong>'
+        texto_acertos = ""
+
+        if conferir and dezenas_alvo:
+            texto_acertos = (
+                f' | <strong style="color:#facc15;">'
+                f'{len(acertos)} ACERTOS</strong>'
             )
 
         st.markdown(
             f"""
-<div class="jogo-box">
-    <div class="jogo-titulo">
-        Jogo {idx + 1}
-        {"🌟 Contém Fixas" if dezenas_fixas else ""}
-    </div>
+            <div class="jogo-box">
+                <div class="jogo-titulo">
+                    Jogo {indice + 1}
+                </div>
 
-    <div>
-        {html_jogo}
-    </div>
+                <div>
+                    {dezenas_html}
+                </div>
 
-    <div style="margin-top:10px;
-                color:#cbd5e1;
-                font-size:13px;">
-        Pares: <strong>{item["pares"]}</strong> |
-        Ímpares: <strong>{item["impares"]}</strong> |
-        Soma: <strong>{item["soma"]}</strong> |
-        Repetidas do último:
-        <strong>{item["repetidas_ultimo"]}</strong> |
-        Score: <strong>{round(item["score"], 2)}</strong>
-        {texto_conferencia_stats}
-    </div>
-</div>
-""",
+                <div style="margin-top:10px;
+                            color:#cbd5e1;
+                            font-size:13px;">
+                    Pares: <strong>{item["pares"]}</strong> |
+                    Ímpares: <strong>{item["impares"]}</strong> |
+                    Soma: <strong>{item["soma"]}</strong> |
+                    Repetidas do último:
+                    <strong>{item["repetidas_ultimo"]}</strong> |
+                    Score: <strong>
+                        {round(item["score"], 2)}
+                    </strong>
+                    {texto_acertos}
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
-    csv = jogos_para_csv(jogos_para_exibir)
-
     st.download_button(
-        label="⬇️ Baixar desdobramento em CSV",
-        data=csv,
+        "⬇️ Baixar desdobramento em CSV",
+        data=jogos_para_csv(jogos),
         file_name="desdobramento_lotofacil.csv",
         mime="text/csv"
     )
 
 
-    # ========================================================
-    # VOLANTE VISUAL E IMPRESSÃO
-    # ========================================================
+# ============================================================
+# VOLANTE
+# ============================================================
 
+if jogos:
     st.markdown(
         '<div class="section-divider"></div>',
         unsafe_allow_html=True
     )
 
-    st.markdown(
-        "## 🎫 Volante — Visualizar e Imprimir"
-    )
+    st.markdown("## 🎫 Volante — visualizar e imprimir")
 
-    st.markdown(
-        '<div class="info-box">'
-        'Escolha todos os jogos ou jogos específicos para '
-        'preencher as caixas do volante. '
-        '<br><br>'
-        'Na impressão, serão exibidas apenas as marcas para '
-        'serem colocadas sobre o volante físico.'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    modo_volante = st.radio(
-        "O que você quer ver/imprimir?",
-        options=[
+    modo = st.radio(
+        "Escolha o modo:",
+        [
             "Todos os jogos gerados",
             "Escolher jogos específicos"
         ],
         horizontal=True,
-        key="modo_volante_radio"
+        key="modo_volante"
     )
 
-    paginas_volante = []
+    paginas = []
 
-    if modo_volante == "Todos os jogos gerados":
-        paginas_volante = montar_paginas_volante(
-            jogos_para_exibir
-        )
+    if modo == "Todos os jogos gerados":
+        paginas = montar_paginas_volante(jogos)
 
-        st.caption(
-            f"Você tem {len(jogos_para_exibir)} jogo(s), "
-            f"agrupados em {len(paginas_volante)} volante(s)."
-        )
-
-        st.markdown(
-            "#### 👀 Pré-visualização"
-        )
-
-        html_geral = (
+        html_volantes = (
             '<div class="volante-grid-geral">'
         )
 
-        for idx, pagina in enumerate(
-            paginas_volante
-        ):
-            html_geral += (
+        for indice, pagina in enumerate(paginas):
+            html_volantes += (
                 '<div class="volante-grupo">'
                 f'<div class="volante-grupo-titulo">'
-                f'Volante {idx + 1}'
+                f'Volante {indice + 1}'
                 '</div>'
                 '<div class="volante-wrapper">'
             )
 
-            html_geral += renderizar_volante_visual(
+            html_volantes += renderizar_volante_visual(
                 pagina["jogo1"],
                 f"Caixa 1 — {pagina['rotulo1']}"
             )
 
-            if pagina["jogo2"]:
-                html_geral += renderizar_volante_visual(
-                    pagina["jogo2"],
+            html_volantes += renderizar_volante_visual(
+                pagina["jogo2"],
+                (
                     f"Caixa 2 — {pagina['rotulo2']}"
+                    if pagina["jogo2"]
+                    else "Caixa 2 — vazia"
                 )
-            else:
-                html_geral += renderizar_volante_visual(
-                    None,
-                    "Caixa 2 — vazia"
-                )
+            )
 
-            html_geral += (
+            html_volantes += (
                 '</div>'
                 '</div>'
             )
 
-        html_geral += '</div>'
+        html_volantes += '</div>'
 
         st.markdown(
-            html_geral,
+            html_volantes,
             unsafe_allow_html=True
         )
 
     else:
-        opcoes_jogos_volante = (
-            ["Nenhum"]
-            + [
-                f"Jogo {i + 1}"
-                for i in range(len(jogos_para_exibir))
-            ]
-        )
+        opcoes_jogos = ["Nenhum"] + [
+            f"Jogo {indice + 1}"
+            for indice in range(len(jogos))
+        ]
 
-        col_vol1, col_vol2 = st.columns(2)
+        coluna1, coluna2 = st.columns(2)
 
-        with col_vol1:
-            escolha_caixa1 = st.selectbox(
+        with coluna1:
+            escolha1 = st.selectbox(
                 "Jogo para a Caixa 1",
-                options=opcoes_jogos_volante,
+                opcoes_jogos,
+                index=1,
+                key="volante_caixa_1"
+            )
+
+        with coluna2:
+            escolha2 = st.selectbox(
+                "Jogo para a Caixa 2",
+                opcoes_jogos,
                 index=(
-                    1
-                    if len(opcoes_jogos_volante) > 1
+                    2
+                    if len(opcoes_jogos) > 2
                     else 0
                 ),
-                key="caixa1_select"
+                key="volante_caixa_2"
             )
 
-        with col_vol2:
-            idx_default2 = (
-                2
-                if len(opcoes_jogos_volante) > 2
-                else 0
-            )
+        jogo1 = None
+        jogo2 = None
 
-            escolha_caixa2 = st.selectbox(
-                "Jogo para a Caixa 2",
-                options=opcoes_jogos_volante,
-                index=idx_default2,
-                key="caixa2_select"
-            )
-
-        jogo_caixa1 = None
-        jogo_caixa2 = None
-
-        if escolha_caixa1 != "Nenhum":
-            indice = int(
-                escolha_caixa1.split(" ")[1]
+        if escolha1 != "Nenhum":
+            indice1 = int(
+                escolha1.replace("Jogo ", "")
             ) - 1
+            jogo1 = jogos[indice1]["jogo"]
 
-            jogo_caixa1 = jogos_para_exibir[
-                indice
-            ]["jogo"]
-
-        if escolha_caixa2 != "Nenhum":
-            indice = int(
-                escolha_caixa2.split(" ")[1]
+        if escolha2 != "Nenhum":
+            indice2 = int(
+                escolha2.replace("Jogo ", "")
             ) - 1
+            jogo2 = jogos[indice2]["jogo"]
 
-            jogo_caixa2 = jogos_para_exibir[
-                indice
-            ]["jogo"]
-
-        st.markdown(
-            "#### 👀 Pré-visualização"
-        )
-
-        html_volante_preview = (
+        html_especifico = (
             '<div class="volante-wrapper">'
+            + renderizar_volante_visual(
+                jogo1,
+                f"Caixa 1 — {escolha1}"
+            )
+            + renderizar_volante_visual(
+                jogo2,
+                f"Caixa 2 — {escolha2}"
+            )
+            + '</div>'
         )
-
-        html_volante_preview += renderizar_volante_visual(
-            jogo_caixa1,
-            f"Caixa 1 — {escolha_caixa1}"
-        )
-
-        html_volante_preview += renderizar_volante_visual(
-            jogo_caixa2,
-            f"Caixa 2 — {escolha_caixa2}"
-        )
-
-        html_volante_preview += '</div>'
 
         st.markdown(
-            html_volante_preview,
+            html_especifico,
             unsafe_allow_html=True
         )
 
-        if jogo_caixa1 or jogo_caixa2:
-            paginas_volante = [{
-                "rotulo1": escolha_caixa1,
-                "jogo1": jogo_caixa1,
+        if jogo1 or jogo2:
+            paginas = [{
+                "rotulo1": escolha1,
+                "jogo1": jogo1,
                 "rotulo2": (
-                    escolha_caixa2
-                    if jogo_caixa2
+                    escolha2
+                    if jogo2
                     else None
                 ),
-                "jogo2": jogo_caixa2
+                "jogo2": jogo2
             }]
 
-    # ========================================================
-    # CALIBRAÇÃO DO VOLANTE
-    # ========================================================
 
+# ============================================================
+# CALIBRAÇÃO DO VOLANTE
+# ============================================================
+
+if jogos:
     with st.expander(
         "⚙️ Calibrar posição de impressão"
     ):
         st.caption(
-            "Ajuste as posições em milímetros até as marcas "
-            "ficarem exatamente sobre os números do volante."
+            "Use milímetros. Ajuste o X e o Y do primeiro "
+            "número de cada caixa e depois ajuste os "
+            "espaçamentos entre colunas e linhas."
         )
 
         calib = st.session_state["calib_volante"]
 
-        c1, c2, c3 = st.columns(3)
+        coluna1, coluna2, coluna3 = st.columns(3)
 
-        with c1:
+        with coluna1:
             calib["x1"] = st.number_input(
                 "Caixa 1 — X do número 21",
                 value=float(calib["x1"]),
                 step=0.5,
-                format="%.1f"
+                format="%.1f",
+                key="calib_x1"
             )
 
             calib["y1"] = st.number_input(
                 "Caixa 1 — Y do número 21",
                 value=float(calib["y1"]),
                 step=0.5,
-                format="%.1f"
+                format="%.1f",
+                key="calib_y1"
             )
 
-        with c2:
+        with coluna2:
             calib["x2"] = st.number_input(
                 "Caixa 2 — X do número 21",
                 value=float(calib["x2"]),
                 step=0.5,
-                format="%.1f"
+                format="%.1f",
+                key="calib_x2"
             )
 
             calib["y2"] = st.number_input(
                 "Caixa 2 — Y do número 21",
                 value=float(calib["y2"]),
                 step=0.5,
-                format="%.1f"
+                format="%.1f",
+                key="calib_y2"
             )
 
-        with c3:
+        with coluna3:
             calib["dx"] = st.number_input(
-                "Espaçamento entre colunas",
+                "Espaçamento das colunas",
                 value=float(calib["dx"]),
                 step=0.1,
-                format="%.1f"
+                format="%.1f",
+                key="calib_dx"
             )
 
             calib["dy"] = st.number_input(
-                "Espaçamento entre linhas",
+                "Espaçamento das linhas",
                 value=float(calib["dy"]),
                 step=0.1,
-                format="%.1f"
+                format="%.1f",
+                key="calib_dy"
             )
 
         calib["raio"] = st.slider(
-            "Raio da marca impressa",
+            "Raio da marca",
             min_value=1.0,
             max_value=4.0,
             value=float(calib["raio"]),
-            step=0.1
+            step=0.1,
+            key="calib_raio"
         )
 
         st.session_state["calib_volante"] = calib
 
-    # ========================================================
-    # GERAÇÃO DO HTML DE IMPRESSÃO
-    # ========================================================
 
-    if paginas_volante:
-        html_impressao = gerar_html_impressao_volante(
-            paginas=paginas_volante,
-            calib=st.session_state["calib_volante"]
-        )
+# ============================================================
+# IMPRESSÃO
+# ============================================================
 
-        st.markdown(
-            "#### 🖨️ Página(s) de impressão"
-        )
-
-        st.warning(
-            "Clique em 'Abrir para imprimir'. "
-            "Na tela de impressão, confira se o tamanho está "
-            "em 100% e se a opção de ajustar à página está "
-            "desativada."
-        )
-
-        conteudo_js = json.dumps(
-            html_impressao
-        )
-
-        botao_abrir_html = f"""
-<div style="display:flex;
-            justify-content:flex-start;">
-    <button id="btn-abrir-impressao"
-        style="
-            padding:12px 20px;
-            font-weight:800;
-            font-size:15px;
-            cursor:pointer;
-            border:none;
-            border-radius:8px;
-            background:#16a34a;
-            color:white;
-            font-family:sans-serif;
-        ">
-        🖨️ Abrir para imprimir
-    </button>
-</div>
-
-<script>
-    const conteudoImpressao = {conteudo_js};
-    const btn = document.getElementById(
-        'btn-abrir-impressao'
-    );
-
-    btn.addEventListener('click', function() {{
-        const blob = new Blob(
-            [conteudoImpressao],
-            {{ type: 'text/html' }}
-        );
-
-        const url = URL.createObjectURL(blob);
-        const nova = window.open(url, '_blank');
-
-        if (!nova) {{
-            btn.innerText =
-                '⚠️ Permita pop-ups e tente novamente';
-        }}
-    }});
-</script>
-"""
-
-        components.html(
-            botao_abrir_html,
-            height=70
-        )
-
-        st.download_button(
-            label="⬇️ Baixar página de impressão em HTML",
-            data=html_impressao,
-            file_name="volante_impressao.html",
-            mime="text/html"
-        )
-
-    else:
-        st.info(
-            "Selecione pelo menos um jogo para imprimir."
-        )
-
-else:
-    st.markdown(
-        '<div class="section-divider"></div>',
-        unsafe_allow_html=True
+if jogos and paginas:
+    html_impressao = gerar_html_impressao(
+        paginas,
+        st.session_state["calib_volante"]
     )
 
-    st.info(
-        "Configure as dezenas fixas e clique em "
-        "'Gerar Novo Desdobramento'."
+    st.markdown("### 🖨️ Impressão")
+
+    st.warning(
+        "Na tela de impressão, deixe a escala em 100% "
+        "e desative a opção 'ajustar à página'."
+    )
+
+    conteudo = json.dumps(html_impressao)
+
+    html_botao = f"""
+    <div>
+        <button id="abrir-impressao"
+            style="
+                padding:12px 20px;
+                font-weight:800;
+                font-size:15px;
+                cursor:pointer;
+                border:none;
+                border-radius:8px;
+                background:#16a34a;
+                color:white;
+            ">
+            🖨️ Abrir para imprimir
+        </button>
+    </div>
+
+    <script>
+        const conteudo = {conteudo};
+        const botao = document.getElementById(
+            "abrir-impressao"
+        );
+
+        botao.addEventListener("click", function() {{
+            const blob = new Blob(
+                [conteudo],
+                {{ type: "text/html" }}
+            );
+
+            const url = URL.createObjectURL(blob);
+            const janela = window.open(url, "_blank");
+
+            if (!janela) {{
+                botao.innerText =
+                    "⚠️ Permita pop-ups no navegador";
+            }}
+        }});
+    </script>
+    """
+
+    components.html(
+        html_botao,
+        height=70
+    )
+
+    st.download_button(
+        "⬇️ Baixar página de impressão em HTML",
+        data=html_impressao,
+        file_name="volante_impressao.html",
+        mime="text/html"
     )
 
 
@@ -2169,18 +2015,16 @@ st.markdown(
 
 st.markdown("## 🧠 Leitura combinatória")
 
-col1, col2, col3 = st.columns(3)
+coluna1, coluna2, coluna3 = st.columns(3)
 
-with col1:
+with coluna1:
     st.markdown("### Distribuição par/ímpar")
 
-    if st.session_state["jogos_gerados"]:
-        df_paridade = pd.DataFrame(
-            st.session_state["jogos_gerados"]
-        )
+    if jogos:
+        tabela = pd.DataFrame(jogos)
 
         st.dataframe(
-            df_paridade[
+            tabela[
                 [
                     "pares",
                     "impares",
@@ -2200,45 +2044,40 @@ with col1:
             use_container_width=True,
             hide_index=True
         )
-
     else:
-        st.caption(
-            "Gere jogos para visualizar esta leitura."
-        )
+        st.caption("Gere os jogos para visualizar.")
 
-with col2:
-    st.markdown(
-        "### Repetição do último concurso"
-    )
+with coluna2:
+    st.markdown("### Repetição do último concurso")
 
-    if st.session_state["jogos_gerados"]:
-        repeticoes = [
-            jogo["repetidas_ultimo"]
-            for jogo in st.session_state["jogos_gerados"]
-        ]
-
-        df_repeticoes = pd.DataFrame({
-            "Repetidas": repeticoes
+    if jogos:
+        repeticoes = pd.DataFrame({
+            "Jogo": [
+                f"Jogo {i + 1}"
+                for i in range(len(jogos))
+            ],
+            "Repetidas": [
+                item["repetidas_ultimo"]
+                for item in jogos
+            ]
         })
 
         st.bar_chart(
-            df_repeticoes,
+            repeticoes,
+            x="Jogo",
             y="Repetidas",
             use_container_width=True
         )
-
     else:
-        st.caption(
-            "Gere jogos para visualizar esta leitura."
-        )
+        st.caption("Gere os jogos para visualizar.")
 
-with col3:
+with coluna3:
     st.markdown("### Faixa de soma")
 
-    if st.session_state["jogos_gerados"]:
+    if jogos:
         somas = [
-            jogo["soma"]
-            for jogo in st.session_state["jogos_gerados"]
+            item["soma"]
+            for item in jogos
         ]
 
         st.metric("Menor soma", min(somas))
@@ -2247,11 +2086,8 @@ with col3:
             "Média",
             round(sum(somas) / len(somas), 2)
         )
-
     else:
-        st.caption(
-            "Gere jogos para visualizar esta leitura."
-        )
+        st.caption("Gere os jogos para visualizar.")
 
 
 # ============================================================
@@ -2264,10 +2100,10 @@ st.markdown(
 )
 
 with st.expander("📚 Ver concursos analisados"):
-    linhas_historico = []
+    historico = []
 
     for concurso in concursos:
-        linhas_historico.append({
+        historico.append({
             "Concurso": concurso["numero"],
             "Data": concurso["data"],
             "Dezenas": " ".join(
@@ -2276,14 +2112,14 @@ with st.expander("📚 Ver concursos analisados"):
         })
 
     st.dataframe(
-        pd.DataFrame(linhas_historico),
+        pd.DataFrame(historico),
         use_container_width=True,
         hide_index=True
     )
 
 
 # ============================================================
-# RESUMO FINAL
+# RESUMO
 # ============================================================
 
 st.markdown(
@@ -2295,94 +2131,91 @@ st.markdown("## 📌 Resumo do painel")
 
 st.markdown(
     """
-<div class="info-box">
-    Este painel reúne frequência das dezenas, análise de atrasos,
-    seleção de base, até 9 dezenas fixas, descartes temporários,
-    geração de jogos, conferência de acertos e impressão dos volantes.
-    <br><br>
-    A análise é estatística e não garante premiação.
-</div>
-""",
+    <div class="info-box">
+        Este painel reúne frequência das dezenas, análise de
+        atrasos, seleção de base, dezenas fixas, descartes,
+        geração de jogos, conferência de acertos, exportação
+        para CSV e impressão dos volantes.
+        <br><br>
+        A análise é estatística e não garante premiação.
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
-total_combinacoes_lotofacil = math.comb(25, 15)
+coluna1, coluna2, coluna3, coluna4 = st.columns(4)
 
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
+with coluna1:
     st.markdown(
         f"""
-<div class="metric-card">
-    <div class="metric-label">
-        Concursos analisados
-    </div>
-    <div class="metric-value">
-        {len(concursos)}
-    </div>
-</div>
-""",
+        <div class="metric-card">
+            <div class="metric-label">
+                Concursos analisados
+            </div>
+            <div class="metric-value">
+                {len(concursos)}
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-with col2:
+with coluna2:
     st.markdown(
         f"""
-<div class="metric-card">
-    <div class="metric-label">
-        Combinações da Lotofácil
-    </div>
-    <div class="metric-value">
-        {total_combinacoes_lotofacil:,}
-    </div>
-</div>
-""",
+        <div class="metric-card">
+            <div class="metric-label">
+                Combinações da Lotofácil
+            </div>
+            <div class="metric-value">
+                {math.comb(25, 15):,}
+            </div>
+        </div>
+        """.replace(",", "."),
         unsafe_allow_html=True
     )
 
-with col3:
+with coluna3:
     st.markdown(
         f"""
-<div class="metric-card">
-    <div class="metric-label">
-        Tamanho da sua base
-    </div>
-    <div class="metric-value">
-        {len(base_sugerida_completa)} nros
-    </div>
-</div>
-""",
+        <div class="metric-card">
+            <div class="metric-label">
+                Tamanho da base
+            </div>
+            <div class="metric-value">
+                {len(base_completa)} dezenas
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-with col4:
+with coluna4:
     st.markdown(
         f"""
-<div class="metric-card">
-    <div class="metric-label">
-        Desdobramento ativo
-    </div>
-    <div class="metric-value">
-        {len(st.session_state["jogos_gerados"])} jogos
-    </div>
-</div>
-""",
+        <div class="metric-card">
+            <div class="metric-label">
+                Jogos gerados
+            </div>
+            <div class="metric-value">
+                {len(jogos)}
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
 st.markdown(
     """
-<br>
-
-<div style="
-    color:#94a3b8;
-    font-size:13px;
-    text-align:center;
-">
-    Análise estatística e combinatória.
-    Este painel não garante premiação e não substitui
-    a decisão pessoal de aposta.
-</div>
-""",
+    <br>
+    <div style="
+        color:#94a3b8;
+        font-size:13px;
+        text-align:center;
+    ">
+        Análise estatística e combinatória.
+        Este painel não garante premiação.
+    </div>
+    """,
     unsafe_allow_html=True
 )
