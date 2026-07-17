@@ -26,9 +26,9 @@ st.set_page_config(
 if "jogos_gerados" not in st.session_state:
     st.session_state["jogos_gerados"] = []
 
-# 🔧 NOVO: salva as fixas para garantir persistência
-if "dezenas_fixas_salvas" not in st.session_state:
-    st.session_state["dezenas_fixas_salvas"] = []
+# 🔧 ÚNICO ponto de verdade para as fixas — gerenciado pelo key do widget
+if "dezenas_fixas" not in st.session_state:
+    st.session_state["dezenas_fixas"] = []
 
 # Calibração da posição de impressão do volante (em milímetros)
 if "calib_volante" not in st.session_state:
@@ -492,15 +492,13 @@ def pontuar_jogo(jogo, mapa_freq, mapa_atraso):
 
 
 # ============================================================
-# 🚀 NOVA FUNÇÃO: Seleção ponderada das variáveis
+# 🚀 Seleção ponderada das variáveis
 # ============================================================
 
 def selecionar_variaveis_ponderadas(pool_variaveis, vagas, mapa_freq, mapa_atraso):
     """
     Seleciona 'vagas' números do pool, com probabilidade proporcional
     ao score combinado: frequência + 25% do atraso.
-    Isso garante que as variáveis misturem as MAIS FREQUENTES
-    com as MAIS ATRASADAS — exatamente como você projetou.
     """
     pool = list(pool_variaveis)
     selecionados = []
@@ -543,26 +541,28 @@ def gerar_desdobramento_com_fixos(
     sobreposicao_max
 ):
     """
-    Gera jogos de 15 dezenas com:
-    - fixos: SEMPRE presentes em 100% dos jogos (até 9)
-    - variáveis: selecionadas com peso (frequência + atraso)
-    - filtros: par/ímpar, soma, repetidas do último, sobreposição
+    Gera jogos de 15 dezenas.
+    fixos: SEMPRE presentes em 100% dos jogos (até 9).
     """
+    # 🔧 Garantir que fixos é uma lista
+    fixos = list(fixos) if fixos else []
+
     vagas_restantes = 15 - len(fixos)
     jogos_validos = []
-    tentativas_max = qtd_jogos * 500  # margem generosa
+    tentativas_max = qtd_jogos * 500
     tentativas = 0
 
     while len(jogos_validos) < qtd_jogos and tentativas < tentativas_max:
         tentativas += 1
 
-        # 🔧 Seleciona variáveis com peso (frequentes + atrasadas)
+        # Seleciona variáveis com peso
         variaveis = selecionar_variaveis_ponderadas(
             base_variavel, vagas_restantes, mapa_freq, mapa_atraso
         )
 
-        # 🔧 Fixos SEMPRE entram primeiro
-        jogo = sorted(list(fixos) + variaveis, key=lambda x: int(x))
+        # 🔧 FIXOS + VARIÁVEIS — sempre nessa ordem
+        jogo = sorted(fixos + variaveis, key=lambda x: int(x))
+
         stats = staticas_jogo(jogo, ultimo_resultado)
 
         # Filtros
@@ -575,7 +575,7 @@ def gerar_desdobramento_com_fixos(
 
         pontos = pontuar_jogo(jogo, mapa_freq, mapa_atraso)
 
-        # Verifica sobreposição máxima com jogos já selecionados
+        # Verifica sobreposição máxima
         jogo_set = set(jogo)
         sobrepoe = False
         for existente in jogos_validos:
@@ -587,7 +587,7 @@ def gerar_desdobramento_com_fixos(
         if sobrepoe:
             continue
 
-        # Verifica se é duplicata exata
+        # Verifica duplicata exata
         jogo_key = "-".join(jogo)
         if any("-".join(e["jogo"]) == jogo_key for e in jogos_validos):
             continue
@@ -601,7 +601,6 @@ def gerar_desdobramento_com_fixos(
             "repetidas_ultimo": stats["repetidas_ultimo"]
         })
 
-    # Se não conseguiu a quantidade desejada, avisa
     if len(jogos_validos) < qtd_jogos:
         st.warning(
             f"⚠️ Só foi possível gerar {len(jogos_validos)} de {qtd_jogos} jogos "
@@ -951,21 +950,21 @@ qtd_jogos = st.sidebar.number_input(
 
 st.sidebar.divider()
 
-# 🔧 MULTISELECT COM SESSION STATE (garante persistência)
-dezenas_fixas = st.sidebar.multiselect(
+# ──────────────────────────────────────────────
+# 🔧🔧🔧 MULTISELECT — ÚNICO PONTO DE VERDADE 🔧🔧🔧
+# ──────────────────────────────────────────────
+# O "key" faz o Streamlit gerenciar o valor automaticamente
+# no session_state. NADA de sync manual. NADA de variável local separada.
+st.sidebar.multiselect(
     "Dezenas FIXAS (Presentes em todos os bilhetes - Máx 9)",
-    options=[str(i).zfill(2) for i in range(1, 25 + 1)],
-    default=st.session_state["dezenas_fixas_salvas"],
+    options=[str(i).zfill(2) for i in range(1, 26)],
     max_selections=9,
-    key="fixas_widget"
+    key="dezenas_fixas"  # ← Streamlit gerencia st.session_state.dezenas_fixas
 )
-
-# 🔧 Sincroniza com session_state
-st.session_state["dezenas_fixas_salvas"] = dezenas_fixas
 
 dezenas_para_descartar = st.sidebar.multiselect(
     "Dezenas temporariamente descartadas",
-    options=[str(i).zfill(2) for i in range(1, 26) if str(i).zfill(2) not in dezenas_fixas],
+    options=[str(i).zfill(2) for i in range(1, 26) if str(i).zfill(2) not in st.session_state.dezenas_fixas],
     default=[]
 )
 
@@ -1093,39 +1092,42 @@ with col2:
     )
 
 # ============================================================
-# BASE SUGERIDA (ADAPTADA PARA NÚMEROS FIXOS)
+# BASE SUGERIDA
 # ============================================================
 
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 st.markdown("## 🎯 Base sugerida")
 
+# 🔧 Referência única: st.session_state.dezenas_fixas
+fixas_atuais = st.session_state.dezenas_fixas
+
 df_base = df_freq.copy()
 
 # Remove descartadas e fixas para calcular o pool de variáveis puras
-exclusoes_pool = dezenas_para_descartar + dezenas_fixas
+exclusoes_pool = dezenas_para_descartar + fixas_atuais
 if exclusoes_pool:
     df_base = df_base[~df_base["dezena"].isin(exclusoes_pool)]
 
 # Vagas livres para números que vão variar no fechamento
-vagas_variaveis = tamanho_base - len(dezenas_fixas)
+vagas_variaveis = tamanho_base - len(fixas_atuais)
 base_variavel = df_base.head(vagas_variaveis)["dezena"].tolist()
 
 # União montada e ordenada para exibição completa
-base_sugerida_completa = sorted(list(set(base_variavel + dezenas_fixas)), key=lambda x: int(x))
+base_sugerida_completa = sorted(list(set(base_variavel + fixas_atuais)), key=lambda x: int(x))
 
 html_base = ""
 for dezena in base_sugerida_completa:
-    if dezena in dezenas_fixas:
+    if dezena in fixas_atuais:
         html_base += f'<span class="dezena-fixa-painel">{dezena}</span>'
     else:
         html_base += f'<span class="dezena-base">{dezena}</span>'
 
 st.markdown(html_base, unsafe_allow_html=True)
 
-if dezenas_fixas:
+if fixas_atuais:
     st.info(
         f"📌 As dezenas destacadas em **Roxo/Azul** são as suas fixas travadas em todos os jogos "
-        f"({len(dezenas_fixas)}/9 usadas). Elas ocupam vagas do tamanho da base, então o pool de "
+        f"({len(fixas_atuais)}/9 usadas). Elas ocupam vagas do tamanho da base, então o pool de "
         f"números variáveis foi ajustado para {vagas_variaveis} dezenas."
     )
 if dezenas_para_descartar:
@@ -1138,7 +1140,7 @@ if dezenas_para_descartar:
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 st.markdown("## 🧩 Geração de jogos")
 
-vagas_restantes_jogo = 15 - len(dezenas_fixas)
+vagas_restantes_jogo = 15 - len(fixas_atuais)
 
 if len(base_sugerida_completa) < 15:
     st.error("A sua base sugerida total precisa atingir no mínimo 15 dezenas combinadas.")
@@ -1148,7 +1150,7 @@ else:
     total_combinacoes_base = math.comb(len(base_variavel), vagas_restantes_jogo)
 
     st.info(
-        f"A sua estratégia atual fixa {len(dezenas_fixas)} números e combina as outras {vagas_restantes_jogo} vagas "
+        f"A sua estratégia atual fixa {len(fixas_atuais)} números e combina as outras {vagas_restantes_jogo} vagas "
         f"em cima das {len(base_variavel)} dezenas variáveis da sua base. "
         f"**Seleção ponderada**: as variáveis são sorteadas com peso, misturando as mais frequentes com as mais atrasadas. "
         f"Total de caminhos possíveis no fechamento: "
@@ -1156,8 +1158,11 @@ else:
     )
 
     if st.button("🎲 Gerar Novo Desdobramento", use_container_width=True, type="primary"):
-        # 🔧 Usa SEMPRE a versão salva no session_state
-        fixos_garantidos = st.session_state["dezenas_fixas_salvas"]
+        # 🔧 Pega DIRETO do session_state gerenciado pelo Streamlit
+        fixos_garantidos = st.session_state.dezenas_fixas
+
+        # DEBUG: confirma o que está sendo passado
+        # st.write(f"🔍 DEBUG: fixos_garantidos = {fixos_garantidos}")
 
         st.session_state["jogos_gerados"] = gerar_desdobramento_com_fixos(
             base_variavel=base_variavel,
@@ -1191,7 +1196,7 @@ if st.session_state["jogos_gerados"]:
     jogos_para_exibir = st.session_state["jogos_gerados"]
 
     # 🔧 Referência às fixas para destaque visual
-    fixos_visuais = st.session_state["dezenas_fixas_salvas"]
+    fixos_visuais = st.session_state.dezenas_fixas
 
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     st.markdown("## 🎟️ Conferência de Acertos")
@@ -1252,16 +1257,12 @@ if st.session_state["jogos_gerados"]:
             eh_acerto = dezena in acertos_desse_jogo and rodar_conferencia
 
             if eh_fixa and eh_acerto:
-                # Fixa que acertou → roxo brilhante
                 html_jogo += f'<span class="dezena-acerto-fixa">{dezena}</span>'
             elif eh_fixa:
-                # Fixa (não acertou) → roxo normal
                 html_jogo += f'<span class="dezena-jogo-fixa">{dezena}</span>'
             elif eh_acerto:
-                # Variável que acertou → dourado
                 html_jogo += f'<span class="dezena-acerto">{dezena}</span>'
             else:
-                # Variável normal → verde
                 html_jogo += f'<span class="dezena-jogo">{dezena}</span>'
 
         texto_conferencia_stats = ""
